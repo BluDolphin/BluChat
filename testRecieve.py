@@ -27,10 +27,11 @@ def recieve_sms(phone, message):
         while True:
             response = send_command(modem, 'at+cmgl="REC UNREAD"')  # List all messages
             
-            logging.debug(response)
             # if response contains new messages, save them to a file
             if "+CMGL:" in response: # +CMGL: is always in the beginning of a new message
                 logging.debug("new Message Received!")
+                with open("received_messages.txt", "w") as f:
+                    f.write(response + "\n")
                     
             response = ""  # Clear response to avoid infinite loop
                     
