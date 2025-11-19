@@ -31,6 +31,7 @@ def recieve_sms():
                 
         time.sleep(2)
 
+
 # Function to parse modem response for SMS messages
 def parse_response(response):
     response_lines = response.splitlines()
@@ -83,12 +84,6 @@ def parse_response(response):
                             print('Multi message found, appending content.')
                             message[3] += message_list[3]  # Append content
                             message[0].append(message_list[0][0])  # Append message ID
-                            
-                            break # Skip appending new entry and pointless iterations
-                    
-                    # If reached the last message without matches
-                    if message == messages[-1]:  
-                        break
             
             messages.append(message_list)
 
