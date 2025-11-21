@@ -18,27 +18,32 @@ def send_command(modem, command, delay=1):
 
 # Main function to receive SMS
 def recieve_sms():    
-    while True:
+    messages = []  # Initialize empty list to store messages
+    
+    while True:        
         response = send_command(modem, 'at+cmgl="REC UNREAD"')  # List all messages
         
         # if response contains new messages, save them to a file
         if "+CMGL:" in response: # +CMGL: is always in the beginning of a new message
             print("New SMS received")
             
-            messages = parse_response(response) # Send response to parser function
+            messages = parse_response(response, messages) # Send response to parser function
             
-            for message in messages:
+        # For each parsed message, handle it
+        for message in messages:
+            if message[4] == True:  # If message has not had new messages
                 handle_message(message)
-                
-        time.sleep(5)  # Check for new messages every 5 seconds
+                    
+            message[4] = True  # Mark message as having been handled as next loop will check for new messages again  
+        time.sleep(3)  # Check for new messages every 5 seconds
 
 # Function to parse modem response for SMS messages
-def parse_response(unread_response):
+def parse_response(unread_response, current_parsed):
+    
     # Split response into lines for processing
     unread_response = unread_response.splitlines()
     
-    # Data is stored nested as [[list of message IDs], Sender, UnixTime, ResponseContent]
-    messages = []  # Initialize messages list of messages to be returned
+    # Data is stored nested as [[list of message IDs], Sender, UnixTime, ResponseContent, No more responses]
     
     # Iterate through each line in the response
     for i in range(len(unread_response)):
@@ -75,24 +80,38 @@ def parse_response(unread_response):
             # append the actual message content (next line)
             active_response.append(unread_response[i+1])
             
+            # Append False as placeholder for has been handled fully
+            active_response.append(True) 
+            
             #print('Cleaned message data: ', active_response)
             
+            
             # If first message, just append
-            if not messages:
-                messages.append(active_response)
+            if not current_parsed:
+                active_response[4] = False  # Indicate message has been handled recently
+                current_parsed.append(active_response)
                 continue # Skip to next iteration (avoids multi SMS handling for first message)
                 
             # Dealing with multi SMS messages
-            for stored_message in messages: # For each stored message
+            for message in current_parsed: # For each stored message
                 # If timestamp is within 5 seconds and matching sender
-                if stored_message[1] == active_response[1] and int(stored_message[2]) <= int(active_response[2]) <= int(stored_message[2]) + 5:  
+                if message[1] == active_response[1] and int(message[2])-10 <= int(active_response[2]) <= int(message[2])+10:  
                     print('Multi message found, appending content.')
                     
-                    stored_message[3] += active_response[3]  # Append SMS content to existing message
-                    stored_message[0].append(active_response[0][0])  # Append SMS ID to list of IDs
+                    message[2] = int(active_response[2])  # Update timestamp to latest message to deal with further multi SMS
+                    message[3] += active_response[3]  # Append SMS content to existing message
+                    message[4] = False  # Indicate message has been handled recently
+                    message[0].append(active_response[0][0])  # Append SMS ID to list of IDs
+                    break
+                else:
+                    # If no match found, append as new message
+                    active_response[4] = False  # Indicate message has been handled recently
+                    current_parsed.append(active_response)
+                    break
+ 
                 
-    print(messages)        
-    return messages
+    print(current_parsed)        
+    return current_parsed
 
 # Function to handle received messages
 # Will be used later to trigger AI response or number filtering
@@ -124,7 +143,6 @@ def handle_message(message):
 # Main function to send SMS
 def send_sms(phone, message):
     modem.reset_input_buffer() # Clear any existing input
-    
     try:
         response = send_command(modem, f'AT+CMGS="{phone}"')
     
