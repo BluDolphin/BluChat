@@ -30,11 +30,18 @@ def recieve_sms():
             messages = parse_response(response, messages) # Send response to parser function
             
         # For each parsed message, handle it
-        for message in messages:
-            if message[4] == True:  # If message has not had new messages
-                handle_message(message)
-                    
-            message[4] = True  # Mark message as having been handled as next loop will check for new messages again  
+        sent_messages = [] # List to store messages that have been handled
+        for individual_message in messages: # For each message thats currently stored
+            if individual_message[4] == True:  # If message has not had new messages
+                handle_message(individual_message) # Handle the message
+                sent_messages.append(individual_message) # Add to sent messages list to be removed later
+            else:     
+                individual_message[4] = True  # Mark message as having been handled as next loop will check for new messages again  
+        
+        # Remove handled messages from the main list
+        for sent_msg in sent_messages: # For each message that has been handled
+            messages.remove(sent_msg) # Remove from main messages list
+            
         time.sleep(3)  # Check for new messages every 5 seconds
 
 # Function to parse modem response for SMS messages
@@ -154,7 +161,7 @@ def send_sms(phone, message):
 
         # Ctrl+Z ends the message
         modem.write(message.encode() + b"\x1A")  
-        time.sleep(3)
+        time.sleep(2)
         
         # Get modem response
         response = modem.read_all().decode(errors='ignore') 
@@ -175,7 +182,7 @@ if __name__ == "__main__":
     
     send_command(modem, "AT")      # Basic check
     send_command(modem, "ATE0")    # Turn off command echo
-    send_command(modem, "AT+CMGF=1")  # Set SMS to text mode
+    send_command(modem, "AT+CMGF=1", 3)  # Set SMS to text mode
     
     send_command(modem, "AT+CMGD=1,4")  # Delete all messages (clearing buffer)
     
