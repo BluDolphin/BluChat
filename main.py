@@ -1,4 +1,5 @@
 import serial, time, datetime
+from textwrap import wrap
 
 serial_port = "/dev/ttyAMA0"  # Adjust if your modem appears on a different port
 baud_rate = 115200
@@ -29,7 +30,7 @@ def recieve_sms():
             for message in messages:
                 handle_message(message)
                 
-        time.sleep(2)
+        time.sleep(5)  # Check for new messages every 5 seconds
 
 # Function to parse modem response for SMS messages
 def parse_response(unread_response):
@@ -74,7 +75,7 @@ def parse_response(unread_response):
             # append the actual message content (next line)
             active_response.append(unread_response[i+1])
             
-            print('Cleaned message data: ', active_response)
+            #print('Cleaned message data: ', active_response)
             
             # If first message, just append
             if not messages:
@@ -89,6 +90,8 @@ def parse_response(unread_response):
                     
                     stored_message[3] += active_response[3]  # Append SMS content to existing message
                     stored_message[0].append(active_response[0][0])  # Append SMS ID to list of IDs
+                
+    print(messages)        
     return messages
 
 # Function to handle received messages
@@ -98,14 +101,18 @@ def handle_message(message):
     content = message[3]
     print(f"Message from {sender}: {content}")
     
-    run_code = send_sms(sender, f"Auto-reply: Received your message '{content}'")
+    segmented_message = wrap(content, 150)  # Split content into 150 character chunks
+    send_sms(sender, f"Auto-reply: Received your message, processing...")
     
-    if run_code == 0:
-        print("✅ SMS sent successfully!")
-    elif run_code == 1:
-        print("❌ SMS sending failed.")
-    else:
-        print(f"❌ An error occurred: {run_code}")
+    for indivitual_segment in segmented_message:
+        run_code = send_sms(sender, indivitual_segment)
+        
+        if run_code == 0:
+            print("✅ SMS sent successfully!")
+        elif run_code == 1:
+            print("❌ SMS sending failed.")
+        else:
+            print(f"❌ An error occurred: {run_code}")
         
         
     print(f"Deleting messages with IDs: {message[0]}")
@@ -116,7 +123,6 @@ def handle_message(message):
 
 # Main function to send SMS
 def send_sms(phone, message):
-    time.sleep(2) # Wait for the modem to initialize
     modem.reset_input_buffer() # Clear any existing input
     
     try:
