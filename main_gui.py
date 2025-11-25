@@ -23,7 +23,7 @@ async def login_page():
      
 @ui.page('/home')
 async def home_page():
-    await ui.context..connected()
+    await ui.context.client.connected()
     # If not authenticated, redirect to login
     if not app.storage.tab.get('authenticated', False):
         ui.navigate.to('/')

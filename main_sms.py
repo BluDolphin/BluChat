@@ -64,7 +64,7 @@ def parse_response(unread_response, current_parsed):
     for i in range(len(unread_response)):
         # Check for message header
         if unread_response[i].startswith('+CMGL:'):
-            console_log.push('Found message header:', unread_response[i]) 
+            console_log.push(f'Found message header: {unread_response[i]}') 
             
             # Split the header line into components
             active_response = unread_response[i].split(',') # split by comma
@@ -97,9 +97,7 @@ def parse_response(unread_response, current_parsed):
             
             # Append False as placeholder for has been handled fully
             active_response.append(True) 
-            
-            #console_log.push('Cleaned message data: ', active_response)
-            
+                        
             
             # If first message, just append
             if not current_parsed:
@@ -135,23 +133,26 @@ def handle_message(message, hash_key):
     content = message[3]
     console_log.push(f"Message from {sender}: {content}")
     
+    # Check if sender is authorised
     if not check_authentication(sender, hash_key):
         console_log.push("Unauthorized sender. Ignoring message.")
         send_sms(sender, "Your number is not authorized to use this service.")#
+        return
+    console_log.push("Authorized sender. Processing message...")
+    
+    # Auto-reply with segmented message
+    segmented_message = wrap(content, 150)  # Split content into 150 character chunks
+    send_sms(sender, f"Auto-reply: Received your message, processing...")
         
-    else:
-        segmented_message = wrap(content, 150)  # Split content into 150 character chunks
-        send_sms(sender, f"Auto-reply: Received your message, processing...")
+    for indivitual_segment in segmented_message:
+        run_code = send_sms(sender, indivitual_segment)
         
-        for indivitual_segment in segmented_message:
-            run_code = send_sms(sender, indivitual_segment)
-            
-            if run_code == 0:
-                console_log.push("✅ SMS sent successfully!")
-            elif run_code == 1:
-                console_log.push("❌ SMS sending failed.")
-            else:
-                console_log.push(f"❌ An error occurred: {run_code}")
+        if run_code == 0:
+            console_log.push("✅ SMS sent successfully!")
+        elif run_code == 1:
+            console_log.push("❌ SMS sending failed.")
+        else:
+            console_log.push(f"❌ An error occurred: {run_code}")
         
 
 def check_authentication(sender, hash_key):
@@ -184,7 +185,7 @@ def send_sms(phone, message):
         
         # Get modem response
         response = MODEM.read_all().decode(errors='ignore') 
-        console_log.push("SMS send response:\n", response)
+        console_log.push(f"SMS send response:\n{response}")
 
         if "OK" in response:
             return 0

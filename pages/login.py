@@ -11,6 +11,7 @@ def content():
         if check_password(inputed_password):
             app.storage.tab['authenticated'] = True # Set authenticated flag
             app.storage.tab['last_active'] = time.time() # Set last active time
+            app.storage.tab['password'] = inputed_password # Store password in session
             ui.navigate.to('/home')
         else:
             return ui.notify('Incorrect password', color='red')
