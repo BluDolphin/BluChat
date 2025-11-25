@@ -6,7 +6,7 @@ COLOUR_BG = '0d1331'  # Very dark blue
 COLOUR_1 = '151b3e'  # Dark blue
 COLOUR_2 = '152851'  # Medium blue
 
-TIMEOUT = 6 # 3 minute timeout
+TIMEOUT = 180 # 3 minute timeout
 
 # Timeout logic
 def check_timeout(reset=False):
