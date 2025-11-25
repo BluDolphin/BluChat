@@ -8,9 +8,12 @@ def content():
 
     def check_input(inputed_password):
         inputed_password = inputed_password.encode('utf-8') # Encode to bytes
+        # use browser key as a salt
+        with open('data/browser_key.txt', 'r') as f:
+            browser_key = f.read().strip().encode('utf-8')
         
         # Hash the inputed password
-        hashed_input = hmac.new(inputed_password, b"thisIsASalt", hashlib.sha512).digest() 
+        hashed_input = hmac.new(inputed_password, browser_key, hashlib.sha512).digest() 
         
         # Create debug log for setup process
         setup_log = ui.log().classes('mt-4 max-h-40 w-full max-w-sm')
@@ -29,6 +32,7 @@ def content():
             
             app.storage.tab['authenticated'] = True # Set authenticated flag
             app.storage.tab['last_active'] = time.time() # Set last active time
+            app.storage.tab['password'] = inputed_password # Store password in session storage
             ui.navigate.to('/home')
 
     with ui.column().classes('absolute-center items-center'):

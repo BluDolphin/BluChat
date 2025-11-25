@@ -237,7 +237,7 @@ def start_service(hash_key):
     # Setup modem
     console_log.push("Starting SMS service...")
     send_command("ATE0")    # Turn off command echo
-    send_command("AT+CMGF=1", 3)  # Set SMS to text mode
+    send_command("AT+CMGF=1")  # Set SMS to text mode
     send_command("AT+CMGD=1,4")  # Delete all messages (clearing buffer)
     
     # Start receiving SMS in background
