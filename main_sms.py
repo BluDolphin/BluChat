@@ -7,8 +7,7 @@ baud_rate = 115200
 
 # define serial port as modem
 modem = serial.Serial(serial_port, baud_rate, timeout=5)
-hash_key = "".encode('utf-8') 
-runnning = False
+running = False
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,10 +21,10 @@ def send_command(command, delay=1):
 
 
 # Main function to receive SMS
-def recieve_sms(running=True):    
+def recieve_sms(hash_key):    
     messages = []  # Initialize empty list to store messages
     
-    while running:               
+    while running_flag:               
         response = send_command('at+cmgl="REC UNREAD"')  # read all unread messages
         
         if "+CMGL:" in response: # +CMTI: is used as a notification for new messages
@@ -37,7 +36,7 @@ def recieve_sms(running=True):
         sent_messages = [] # List to store messages that have been handled
         for individual_message in messages: # For each message thats currently stored
             if individual_message[4] == True:  # If message has not had new messages
-                handle_message(individual_message) # Handle the message
+                handle_message(individual_message, hash_key) # Handle the message
                 sent_messages.append(individual_message) # Add to sent messages list to be removed later
             else:     
                 individual_message[4] = True  # Mark message as having been handled as next loop will check for new messages again  
@@ -130,12 +129,12 @@ def parse_response(unread_response, current_parsed):
 
 # Function to handle received messages
 # Will be used later to trigger AI response or number filtering
-def handle_message(message):
+def handle_message(message, hash_key):
     sender = message[1]
     content = message[3]
     print(f"Message from {sender}: {content}")
     
-    if not check_authentication(sender):
+    if not check_authentication(sender, hash_key):
         print("Unauthorized sender. Ignoring message.")
         send_sms(sender, "Your number is not authorized to use this service.")#
         
@@ -154,10 +153,11 @@ def handle_message(message):
                 print(f"❌ An error occurred: {run_code}")
         
 
-def check_authentication(sender):
+def check_authentication(sender, hash_key):
     with open("authorised_users.txt", "r") as f:
         authorized_numbers = f.read().splitlines()
     
+    hash_key = hash_key.encode('utf-8')
     sender_hashed = hmac.new(hash_key, sender.encode('utf-8'), hashlib.sha512).digest()
     
     if sender_hashed.hex() in authorized_numbers:
@@ -193,7 +193,13 @@ def send_sms(phone, message):
         return e
 
 
-def start_service():
+# start and stop service functions
+def start_service(hash_key):   
+    # Define flag as global
+    global running_flag
+    running_flag = True
+    
+    # Setup modem
     modem.reset_input_buffer() # Clear any existing input
     send_command("AT")      # Basic check
     send_command("ATE0")    # Turn off command echo
@@ -201,12 +207,17 @@ def start_service():
     send_command("AT+CMGD=1,4")  # Delete all messages (clearing buffer)
     
     # Start receiving SMS in background
-    recieve_sms(running=True)
+    recieve_sms(hash_key)
+    
+    # Close modem connection after stopped
+    modem.close()
+    print("Modem connection closed.")
 
 def stop_service():
-    runnning = False
-    modem.close()
-    
-    # Stop receiving SMS function
-    print("Modem connection closed.")
+    # Define flag as global
+    global running_flag
+    running_flag = False
+
+    # Stopping message
+    print("Stopping SMS service...")
     
