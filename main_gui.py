@@ -43,6 +43,21 @@ async def settings_page():
     # Show settings page
     settings.content()
 
+# Generate/read storage secret for browser storage
+# File Does not exist
+if not os.path.exists('data/browser_key.txt'): 
+    storage_key = secrets.token_urlsafe(128) # Generate a secure random key
+    if not os.path.exists('data'): # Create data directory if it doesn't exist
+        os.makedirs('data')
+    with open('data/browser_key.txt', 'w') as f: # Write the key to file
+        f.write(storage_key)
+# File exists 
+else:
+    with open('data/browser_key.txt', 'r') as f: # Read the key from file
+        storage_key = f.read().strip()
+        
+        
 ui.run(port=8080, 
        title='BluChat', 
-       show=False)
+       show=False, 
+       storage_secret=storage_key)
