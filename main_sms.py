@@ -1,4 +1,4 @@
-import serial, time, datetime
+import serial, time, datetime, logging
 import hmac, hashlib
 from textwrap import wrap
 
@@ -7,8 +7,10 @@ baud_rate = 115200
 
 # define serial port as modem
 modem = serial.Serial(serial_port, baud_rate, timeout=5)
-hash_key = "".encode('utf-8') # STORED SECURELY SOMEWHERE
+hash_key = "".encode('utf-8') 
+runnning = False
 
+logging.basicConfig(level=logging.INFO)
 
 # Function to send AT commands and read responses
 def send_command(command, delay=1):
@@ -20,10 +22,10 @@ def send_command(command, delay=1):
 
 
 # Main function to receive SMS
-def recieve_sms():    
+def recieve_sms(running=True):    
     messages = []  # Initialize empty list to store messages
     
-    while True:               
+    while running:               
         response = send_command('at+cmgl="REC UNREAD"')  # read all unread messages
         
         if "+CMGL:" in response: # +CMTI: is used as a notification for new messages
@@ -191,24 +193,20 @@ def send_sms(phone, message):
         return e
 
 
-if __name__ == "__main__":     
-    # Get decryption key from user
-    while True:
-        hash_key = input("Enter HMAC hash key: ").encode('utf-8')
-        with open("authorised_users.txt", "r") as f:
-            hashed = hmac.new(hash_key, b"testhashkey", hashlib.sha512).digest()
-            if hashed.hex() in f.readline():
-                print("✅ Key accepted.")
-                break
-            else:
-                print("❌ Key incorrect, try again.")
-    
-    
-    modem.reset_input_buffer() # Clear any existing input   
+def start_service():
+    modem.reset_input_buffer() # Clear any existing input
     send_command("AT")      # Basic check
     send_command("ATE0")    # Turn off command echo
     send_command("AT+CMGF=1", 3)  # Set SMS to text mode
     send_command("AT+CMGD=1,4")  # Delete all messages (clearing buffer)
     
-    # start receiving SMS in background
-    recieve_sms() 
+    # Start receiving SMS in background
+    recieve_sms(running=True)
+
+def stop_service():
+    runnning = False
+    modem.close()
+    
+    # Stop receiving SMS function
+    print("Modem connection closed.")
+    
