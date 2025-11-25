@@ -27,8 +27,8 @@ def content():
         with open("data/config.txt", "a") as f:
             f.write(hashed_input.hex())
             
-            app.storage.user['authenticated'] = True # Set authenticated flag
-            app.storage.user['last_active'] = time.time() # Set last active time
+            app.storage.tab['authenticated'] = True # Set authenticated flag
+            app.storage.tab['last_active'] = time.time() # Set last active time
             ui.navigate.to('/home')
 
     with ui.column().classes('absolute-center items-center'):

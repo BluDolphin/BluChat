@@ -6,11 +6,11 @@ colour_bg = '0d1331'  # Very dark blue
 
 def content():
     ui.query('body').style(f'background-color: #{colour_bg}')
-
+    
     def check_input(inputed_password):
         if check_password(inputed_password):
-            app.storage.user['authenticated'] = True # Set authenticated flag
-            app.storage.user['last_active'] = time.time() # Set last active time
+            app.storage.tab['authenticated'] = True # Set authenticated flag
+            app.storage.tab['last_active'] = time.time() # Set last active time
             ui.navigate.to('/home')
         else:
             return ui.notify('Incorrect password', color='red')

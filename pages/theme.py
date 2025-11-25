@@ -1,29 +1,10 @@
 from nicegui import ui, app
 from contextlib import contextmanager
-import time
+from functions.check_timeout import check_timeout
 
 COLOUR_BG = '0d1331'  # Very dark blue
 COLOUR_1 = '151b3e'  # Dark blue
 COLOUR_2 = '152851'  # Medium blue
-
-TIMEOUT = 180 # 3 minute timeout
-
-# Timeout logic
-def check_timeout(reset=False):
-    # If authenticated
-    print("Checking timeout...")
-    if app.storage.user.get('authenticated', True):
-        # Check last active time
-        last_active = app.storage.user.get('last_active', 0)
-        
-        # If time between last active and now exceeds TIMEOUT
-        if time.time() - last_active > TIMEOUT:
-            app.storage.user.clear() # Clear session
-            ui.navigate.to('/') # Redirect to login
-            ui.notify('Session expired', color='red') # Notify user
-        elif reset:
-            # Update last active time
-            app.storage.user['last_active'] = time.time()
 
 
 # context manager for page layout with sidebar and theming
@@ -43,10 +24,8 @@ def frame(current_page):
     with ui.row().classes('h-screen w-full no-wrap gap-0') as layout_container:
         # Timer to check periodically (In main window to fix navigation)
         # Safe wrapper to ensure layout_container is accessible
-        def call_check_timeout():
-            with layout_container:
-                check_timeout()
-        ui.timer(10.0, call_check_timeout)
+        
+        ui.timer(10.0, lambda: check_timeout()) # Check for timeout every 10 seconds
         
         # Sidebar: COLOUR_1, full height, width 64, padding 4
         with ui.column().style(f'background-color: #{COLOUR_1}').classes('w-64 h-full p-4'):

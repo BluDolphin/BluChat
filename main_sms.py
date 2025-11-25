@@ -2,11 +2,11 @@ import serial, time, datetime, logging
 import hmac, hashlib
 from textwrap import wrap
 
-serial_port = "/dev/ttyAMA0"  # Adjust if your modem appears on a different port
-baud_rate = 115200
+SERIAL_PORT = "/dev/ttyAMA0"  # Adjust if your modem appears on a different port
+BAUD_RATE = 115200
 
 # define serial port as modem
-modem = serial.Serial(serial_port, baud_rate, timeout=5)
+MODEM = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=5)
 running_flag = False
 
 logging.basicConfig(level=logging.INFO)
@@ -14,9 +14,9 @@ logging.basicConfig(level=logging.INFO)
 
 # Function to send AT commands and read responses
 def send_command(command, delay=1):
-    modem.write((command + '\r').encode())
+    MODEM.write((command + '\r').encode())
     time.sleep(delay)
-    response = modem.read_all().decode(errors='ignore')
+    response = MODEM.read_all().decode(errors='ignore')
     console_log.push(f"> {command}\n{response}")
     return response
 
@@ -167,7 +167,7 @@ def check_authentication(sender, hash_key):
     
 # Main function to send SMS
 def send_sms(phone, message):
-    modem.reset_input_buffer() # Clear any existing input
+    MODEM.reset_input_buffer() # Clear any existing input
     
     try:
         response = send_command(f'AT+CMGS="{phone}"')
@@ -179,11 +179,11 @@ def send_sms(phone, message):
             return
 
         # Ctrl+Z ends the message
-        modem.write(message.encode() + b"\x1A")  
+        MODEM.write(message.encode() + b"\x1A")  
         time.sleep(2)
         
         # Get modem response
-        response = modem.read_all().decode(errors='ignore') 
+        response = MODEM.read_all().decode(errors='ignore') 
         console_log.push("SMS send response:\n", response)
 
         if "OK" in response:
@@ -224,7 +224,7 @@ def start_service(hash_key, home_log):
     recieve_sms(hash_key)
     
     # Close modem connection after stopped
-    modem.close()
+    MODEM.close()
     console_log.push("Modem connection closed.")
 
 def stop_service():
