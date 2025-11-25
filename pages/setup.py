@@ -1,5 +1,5 @@
 from nicegui import ui, app
-import os, hmac, hashlib
+import os, hmac, hashlib, time
 
 colour_bg = '0d1331'  # Very dark blue
 
@@ -28,6 +28,7 @@ def content():
             f.write(hashed_input.hex())
             
             app.storage.user['authenticated'] = True # Set authenticated flag
+            app.storage.user['last_active'] = time.time() # Set last active time
             ui.navigate.to('/home')
 
     with ui.column().classes('absolute-center items-center'):
