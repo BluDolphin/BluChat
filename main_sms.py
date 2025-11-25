@@ -7,9 +7,29 @@ BAUD_RATE = 115200
 
 # define serial port as modem
 MODEM = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=5)
+MODEM.close()  # Ensure modem is closed initially
+
 running_flag = False
 
 logging.basicConfig(level=logging.INFO)
+
+# Shared log class to allow multiple logs to receive messages
+class SharedLog:
+    def __init__(self):
+        self._loggers = [] # List of loggers to send messages to
+
+    def add(self, logger):
+        self._loggers.append(logger) # Add logger to list
+
+    def remove(self, logger):
+        if logger in self._loggers:
+            self._loggers.remove(logger) # Remove logger from list
+
+    def push(self, message):
+        for logger in self._loggers:
+            logger.push(message) # Push message to all loggers
+
+console_log = SharedLog()
 
 
 # Function to send AT commands and read responses
@@ -196,18 +216,17 @@ def send_sms(phone, message):
 
 
 # start and stop service functions
-def start_service(hash_key, home_log):   
+def start_service(hash_key):   
     # Define flag as global
     global running_flag
-    global console_log
     
     # Prevent multiple instances
     if running_flag == True:
         return
     
     running_flag = True
-    console_log = home_log
-    
+    MODEM.open()  # Open modem connection
+
     # Check modem connection
     if "OK" not in send_command("AT"):
         console_log.push("❌ Modem not responding. Check connection.")

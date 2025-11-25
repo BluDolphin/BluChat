@@ -6,13 +6,13 @@ from functions.check_password import check_password
 
 def content():
     # Start the chatbot service
-    def start_bot(home_log):
+    def start_bot():
         check_timeout(True)  # Reset timeout timer
         input_password = app.storage.tab.get('password', '')
         if not check_password(input_password):
             return ui.notify('Incorrect password', color='red')
         
-        threading.Thread(target=main_sms.start_service, args=(input_password, home_log)).start() # start in new thread
+        threading.Thread(target=main_sms.start_service, args=(input_password,)).start() # start in new thread
         return
     
     # Stop the chatbot service
@@ -26,9 +26,12 @@ def content():
     with frame('Home'):
         ui.label('Welcome to BluChat').classes('text-2xl mt-2')
         with ui.row().classes('w-full no-wrap gap-0'):
-            start_button = ui.button('Start Chatbot', on_click=lambda: start_bot(home_log), color='green').classes('mt-4')
+            start_button = ui.button('Start Chatbot', on_click=start_bot, color='green').classes('mt-4')
             stop_button = ui.button('Stop Chatbot', on_click=stop_bot, color='red').classes('mt-4 ml-4')
         home_log = ui.log(max_lines=100).classes('mt-4 h-100 w-full')
+        
+        main_sms.console_log.add(home_log) # Add home_log to shared console log
+        ui.context.client.on_disconnect(lambda: main_sms.console_log.remove(home_log)) # Remove on disconnect
     
     
         
