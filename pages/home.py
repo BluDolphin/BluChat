@@ -35,7 +35,7 @@ def content():
         with ui.row().classes('w-full no-wrap gap-0'):
             start_button = ui.button('Start Chatbot', on_click=start_bot_dialog.open, color='green').classes('mt-4')
             stop_button = ui.button('Stop Chatbot', on_click=stop_bot, color='red').classes('mt-4 ml-4')
-        home_log = ui.log().classes('mt-4 h-100 w-full')
+        home_log = ui.log(max_lines=100).classes('mt-4 h-100 w-full')
     
     
         
