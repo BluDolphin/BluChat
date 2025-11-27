@@ -4,35 +4,45 @@ import json
 # 1 for already there
 # 2 for not there
 
+# Data stored in list of dictionaries
+# [{"active": True, "number": "+447123456789"}, {"active": False, "number": "+447987654321"}]
+
 def load_numbers():
     with open('data/authorised_numbers.txt', 'r') as f:
-        stored_numbers = json.load(f)
+        # Try and get data
+        try:
+            stored_numbers = json.load(f)
+        
+        # If fail then assume empty
+        except json.JSONDecodeError:
+            stored_numbers = []
         
     return stored_numbers
 
-def add_number(number, stored_numbers):    
+def add_number(number):  
+    stored_numbers = load_numbers()
+      
     # Check if number already exists
-    if [True, number] and [False, number] in stored_numbers:
+    if check_number(number) == True:
         return 1
     
     # Add number to list
-    stored_numbers.append([True, number])
+    stored_numbers.append({"active": True, "number": number})
     
     with open('data/authorised_numbers.txt', 'w') as f:
         json.dump(stored_numbers, f)
     
     return stored_numbers
 
-def remove_number(number, stored_numbers):       
-    # Check if number exists
-    if not [True, number] and not [False, number] in stored_numbers:
-        return 1
+def remove_number(number):       
+    stored_numbers = load_numbers()
     
     # Find index of number list 
-    try:
-        index = stored_numbers.index([False, number])
-    except ValueError:
-        index = stored_numbers.index([True, number])
+    index = -1 # set index as not found
+    for i, item in enumerate(stored_numbers): 
+        if item["number"] == number:
+            index = i
+            break
     
     # Remove number from list
     stored_numbers.pop(index)
@@ -42,12 +52,13 @@ def remove_number(number, stored_numbers):
     
     return stored_numbers
     
-
-def toggle_number(number, stored_numbers): 
+def toggle_number(number): 
+    stored_numbers = load_numbers()
+    
     # Find index of number list 
     index = -1 # set index as not found
     for i, item in enumerate(stored_numbers): 
-        if item[1] == number:
+        if item["number"] == number:
             index = i
             break
         
@@ -56,10 +67,19 @@ def toggle_number(number, stored_numbers):
         return 2
     
     # Toggle the boolean value
-    stored_numbers[index][0] = not stored_numbers[index][0]
+    stored_numbers[index]["active"] = not stored_numbers[index]["active"]
     
     # Save the updated list to the file
     with open('data/authorised_numbers.txt', 'w') as f:
         json.dump(stored_numbers, f)
     
     return stored_numbers
+
+def check_number(number): 
+    stored_numbers = load_numbers()
+    
+    # Check if number exists (convert both to string to be safe)
+    if any(str(d["number"]).strip() == str(number).strip() for d in stored_numbers):
+        return True
+    else:
+        return False

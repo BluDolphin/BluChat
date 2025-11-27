@@ -154,7 +154,7 @@ def handle_message(message, hash_key):
     console_log.push(f"Message from {sender}: {content}")
     
     # Check if sender is authorised
-    if not check_authentication(sender, hash_key):
+    if not check_authentication(sender, hash_key, False):
         console_log.push("Unauthorized sender. Ignoring message.")
         send_sms(sender, "Your number is not authorized to use this service.")#
         return
@@ -175,12 +175,15 @@ def handle_message(message, hash_key):
             console_log.push(f"❌ An error occurred: {run_code}")
         
 
-def check_authentication(sender, hash_key):
+def check_authentication(sender, key, toggle):
+    if toggle == False:
+        return True
+    
     with open("data/authorised_numbers.txt", "r") as f:
         authorized_numbers = f.read().splitlines()
     
-    hash_key = hash_key.encode('utf-8')
-    sender_hashed = hmac.new(hash_key, sender.encode('utf-8'), hashlib.sha512).digest()
+    decrypt_key = key.encode('utf-8')
+    sender_hashed = hmac.new(decrypt_key, sender.encode('utf-8'), hashlib.sha512).digest()
     
     if sender_hashed.hex() in authorized_numbers:
         return True

@@ -26,3 +26,23 @@ def hash_password(user_input):
     # Hash the inputed password
     hash = hmac.new(user_input, browser_key, hashlib.sha512).digest() 
     return hash
+
+# TODO: sort this out 
+def encrypt_data(data, key, salt):
+    # Symetric encryption of data using AES-256 with HMAC-SHA512 key derivation
+    
+    # Key is password
+    # Salt is browser key
+    
+    # Create HMAC object with key and salt
+    hmac_key = hmac.new(salt.encode('utf-8'), key.encode('utf-8'), hashlib.sha512)
+    
+    return 
+
+data = "test"
+key = "key"
+salt = "salt"
+
+print(encrypt_data(data, key, salt))
+print(encrypt_data(data, key, salt))
+print(encrypt_data(data, key, salt))
