@@ -42,7 +42,7 @@ def frame(current_page):
                 ui.link(name, target).classes(classes)
 
             nav_link('Home', '/home')
-            nav_link('Settings', '/settings')
+            nav_link('Whitelist', '/whitelist')
         
         # Main Content Area
         with ui.column().style(f'background-color: #{COLOUR_BG}').classes('p-4 w-full h-full text-white'):

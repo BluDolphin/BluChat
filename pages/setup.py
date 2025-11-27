@@ -1,5 +1,6 @@
 from nicegui import ui, app
 import os, hmac, hashlib, time
+from functions.encryption_functions import hash_password
 
 colour_bg = '0d1331'  # Very dark blue
 
@@ -8,16 +9,13 @@ def content():
 
     def check_input(inputed_password):
         inputed_password = inputed_password.encode('utf-8') # Encode to bytes
-        # use browser key as a salt
-        with open('data/browser_key.txt', 'r') as f:
-            browser_key = f.read().strip().encode('utf-8')
         
         # Hash the inputed password
-        hashed_input = hmac.new(inputed_password, browser_key, hashlib.sha512).digest() 
+        hashed_input = hash_password(inputed_password)
         
         # Create debug log for setup process
         setup_log = ui.log().classes('mt-4 max-h-40 w-full max-w-sm')
-        setup_log.push(f'Hashed input: {hashed_input.hex()}')
+        setup_log.push(f'Hashed input: {hashed_input}')
         
         # First time setup: create data directory and files if they don't exist
         setup_log.push('Setting up data directory and files...')
@@ -27,8 +25,10 @@ def content():
         
         # save the hashed password during setup
         setup_log.push('Storing hashed password...')
-        with open("data/config.txt", "a") as f:
-            f.write(hashed_input.hex())
+        
+        # Write hashed password 2nd line of crypt_data.txt
+        with open("data/crypt_data.txt", "a") as f:
+            f.write(f"\n{hashed_input.hex()}")
             
             app.storage.tab['authenticated'] = True # Set authenticated flag
             app.storage.tab['last_active'] = time.time() # Set last active time

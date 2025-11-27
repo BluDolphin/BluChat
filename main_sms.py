@@ -14,7 +14,7 @@ running_flag = False
 logging.basicConfig(level=logging.INFO)
 
 # Shared log class to allow multiple logs to receive messages
-class SharedLog:
+class SharedHomeLog:
     def __init__(self):
         self._loggers = [] # List of loggers to send messages to
 
@@ -29,7 +29,7 @@ class SharedLog:
         for logger in self._loggers:
             logger.push(message) # Push message to all loggers
 
-console_log = SharedLog()
+console_log = SharedHomeLog()
 
 
 # Function to send AT commands and read responses

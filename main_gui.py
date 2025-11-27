@@ -1,6 +1,6 @@
 from nicegui import ui, app
 import os, secrets
-from pages import home, login, settings, setup
+from pages import home, login, setup, whitelist
 
 # App is for handling browser storage and session management
 # Checks for a 'authenticated' cookie 
@@ -32,8 +32,8 @@ async def home_page():
     # Show home page
     home.content()
 
-@ui.page('/settings')
-async def settings_page():
+@ui.page('/whitelist')
+async def number_whitelist_page():
     await ui.context.client.connected()
     # If not authenticated, redirect to login
     if not app.storage.tab.get('authenticated', False):
@@ -41,19 +41,21 @@ async def settings_page():
         return
     
     # Show settings page
-    settings.content()
+    whitelist.content()
 
-# Generate/read storage secret for browser storage
-# File Does not exist
-if not os.path.exists('data/browser_key.txt'): 
+
+
+# Generate/read secret to sign users sessionID cookie
+# File doesnt have 3 lines
+if not os.path.exists('data/crypt_data.txt'): 
     storage_key = secrets.token_urlsafe(128) # Generate a secure random key
     if not os.path.exists('data'): # Create data directory if it doesn't exist
         os.makedirs('data')
-    with open('data/browser_key.txt', 'w') as f: # Write the key to file
+    with open('data/crypt_data.txt', 'w') as f: # Write the key to file
         f.write(storage_key)
 # File exists 
 else:
-    with open('data/browser_key.txt', 'r') as f: # Read the key from file
+    with open('data/crypt_data.txt', 'r') as f: # Read the key from file
         storage_key = f.read().strip()
         
         

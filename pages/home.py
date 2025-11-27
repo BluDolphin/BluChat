@@ -2,17 +2,18 @@ import threading
 from nicegui import app, ui
 import main_sms
 from pages.theme import frame, check_timeout
-from functions.check_password import check_password
+from functions.encryption_functions import check_hash   
 
 def content():
     # Start the chatbot service
     def start_bot():
         check_timeout(True)  # Reset timeout timer
-        input_password = app.storage.tab.get('password', '')
-        if not check_password(input_password):
-            return ui.notify('Incorrect password', color='red')
         
-        threading.Thread(target=main_sms.start_service, args=(input_password,)).start() # start in new thread
+        # Get stored password from tab storage
+        password = app.storage.tab.get('password', '')
+        
+        # Start thread and pass password for whitelist decryption
+        threading.Thread(target=main_sms.start_service, args=(password,)).start() # start in new thread
         return
     
     # Stop the chatbot service
