@@ -18,7 +18,7 @@ def frame(current_page):
         </style>
     ''')
     
-    check_timeout(True)
+    check_timeout(True) # Check for session timeout & reset timer
             
     # Create a full-height row to hold sidebar and main content
     with ui.row().classes('h-screen w-full no-wrap gap-0') as layout_container:

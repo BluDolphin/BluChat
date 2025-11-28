@@ -1,9 +1,11 @@
 from nicegui import ui, app
 from pages.theme import frame
 from functions.phonenumber_functions import load_numbers, add_number, remove_number, toggle_number
+from functions.check_timeout import check_timeout
 
 def content():
     def add_value(number):
+        check_timeout(True) # Check for session timeout & reset timer
         # Check for a number 
         if not number.isdigit():
             ui.notify('Not a number', color='red')
@@ -26,11 +28,13 @@ def content():
         ui.notify('Number added successfully', color='green')
     
     def remove_value(number):
+        check_timeout(True) # Check for session timeout & reset timer
         # Remove number and get updated list
         stored_numbers=remove_number(number, app.storage.tab.get('password')) # 
         table.rows = stored_numbers # Update table rows
 
     def toggle_value(row):
+        check_timeout(True) # Check for session timeout & reset timer
         # Toggle active status and update table
         toggle_number(row['number'], app.storage.tab.get('password'))
 
