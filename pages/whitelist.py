@@ -1,4 +1,4 @@
-from nicegui import ui
+from nicegui import ui, app
 from pages.theme import frame
 from functions.phonenumber_functions import load_numbers, add_number, remove_number, toggle_number
 
@@ -13,11 +13,28 @@ def content():
             ui.notify('Number length must be between 11 and 13 digits', color='red')
             return
         
-        stored_numbers=add_number(number)
+        # Add number and update table
+        result = add_number(number, app.storage.tab.get('password'))
+        
+        # If number already exists
+        if result == 1:
+            ui.notify('Number already exists', color='orange')
+            return
+
+        table.rows = result # Update table rows
+        new_number_input.value = ''  # Clear input field after adding
+        ui.notify('Number added successfully', color='green')
     
     def remove_value(number):
-        stored_numbers=remove_number(number)
-        
+        # Remove number and get updated list
+        stored_numbers=remove_number(number, app.storage.tab.get('password')) # 
+        table.rows = stored_numbers # Update table rows
+
+    def toggle_value(row):
+        # Toggle active status and update table
+        toggle_number(row['number'], app.storage.tab.get('password'))
+
+    
     columns = [
     {'name': 'active', 'label': 'active', 'field': 'active'},
     {'name': 'number', 'label': 'number', 'field': 'number'},
@@ -25,20 +42,37 @@ def content():
     ]  
     
     # Load initial data
-    stored_numbers = load_numbers()
+    stored_numbers = load_numbers(app.storage.tab.get('password'))
 
     
     with frame('Whitelist'):
         ui.label('Manage whitelisted phone numbers').classes('text-2xl mt-2')
+        #TODO: FIX INPUT SHOWING ENCRYPTED BEFORE REFRESH
         with ui.row().classes('w-full items-center'):
             new_number_input = ui.input(label='Phone Number').props('input-style="color: white" label-color="white"').classes('w-64')
             ui.button('Add', on_click=lambda: add_value(new_number_input.value)).classes('ml-4')
-        table = ui.table(columns=columns, rows=stored_numbers)
+            
         
-        table.add_slot('body-cell-action', '''
+        for column in columns:
+            column['align'] = 'center'
+        table = ui.table(columns=columns, rows=stored_numbers)
+
+
+        # Add switch to active column
+            # In column active
+        table.add_slot('body-cell-active', ''' 
         <q-td :props="props">
-            <q-btn label="Action" @click="$parent.$emit('click_action', props.row)" flat />
+            <q-toggle v-model="props.row.active" @update:model-value="$parent.$emit('toggle_active', props.row)" />
         </q-td>
         ''')
-
-        table.on('click_action', lambda e: remove_value(e.args))
+        
+        # Add button to each row
+        table.add_slot('body-cell-action', '''
+        <q-td :props="props">
+            <q-btn label="Remove" @click="$parent.$emit('click_action', props.row)" flat />
+        </q-td>
+        ''')
+        
+        # Mini functions for toggle and remove
+        table.on('toggle_active', lambda e: toggle_value(e.args))
+        table.on('click_action', lambda e: remove_value(e.args['number']))

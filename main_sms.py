@@ -2,6 +2,8 @@ import serial, time, datetime, logging
 import hmac, hashlib
 from textwrap import wrap
 
+from functions.phonenumber_functions import load_numbers
+
 SERIAL_PORT = "/dev/ttyAMA0"  # Adjust if your modem appears on a different port
 BAUD_RATE = 115200
 
@@ -42,7 +44,7 @@ def send_command(command, delay=1):
 
 
 # Main function to receive SMS
-def recieve_sms(hash_key):    
+def recieve_sms(key):    
     messages = []  # Initialize empty list to store messages
     
     while running_flag:               
@@ -57,7 +59,7 @@ def recieve_sms(hash_key):
         sent_messages = [] # List to store messages that have been handled
         for individual_message in messages: # For each message thats currently stored
             if individual_message[4] == True:  # If message has not had new messages
-                handle_message(individual_message, hash_key) # Handle the message
+                handle_message(individual_message, key) # Handle the message
                 sent_messages.append(individual_message) # Add to sent messages list to be removed later
             else:     
                 individual_message[4] = True  # Mark message as having been handled as next loop will check for new messages again  
@@ -148,13 +150,13 @@ def parse_response(unread_response, current_parsed):
 
 # Function to handle received messages
 # Will be used later to trigger AI response or number filtering
-def handle_message(message, hash_key):
+def handle_message(message, key):
     sender = message[1]
     content = message[3]
     console_log.push(f"Message from {sender}: {content}")
     
     # Check if sender is authorised
-    if not check_authentication(sender, hash_key, False):
+    if not check_authentication(sender, key, True):
         console_log.push("Unauthorized sender. Ignoring message.")
         send_sms(sender, "Your number is not authorized to use this service.")#
         return
@@ -162,7 +164,7 @@ def handle_message(message, hash_key):
     
     # Auto-reply with segmented message
     segmented_message = wrap(content, 150)  # Split content into 150 character chunks
-    send_sms(sender, f"Auto-reply: Received your message, processing...")
+    send_sms('07591432022', f"Auto-reply: Received your message, processing...")
         
     for indivitual_segment in segmented_message:
         run_code = send_sms(sender, indivitual_segment)
@@ -179,14 +181,18 @@ def check_authentication(sender, key, toggle):
     if toggle == False:
         return True
     
-    with open("data/authorised_numbers.txt", "r") as f:
-        authorized_numbers = f.read().splitlines()
-    
-    decrypt_key = key.encode('utf-8')
-    sender_hashed = hmac.new(decrypt_key, sender.encode('utf-8'), hashlib.sha512).digest()
-    
-    if sender_hashed.hex() in authorized_numbers:
-        return True
+    authorized_numbers = load_numbers(key)
+        
+    for entry in authorized_numbers:
+        # Convert local UK number to international format
+        if not entry['number'].startswith('+'):
+            entry['number'] = entry['number'][1:] # Cut first number 
+            entry['number'] = '+44' + entry['number']  # Convert to international format
+        
+        if entry['number'] == sender and entry['active']:
+            return True
+            
+    return False
 
     
 # Main function to send SMS
@@ -219,7 +225,7 @@ def send_sms(phone, message):
 
 
 # start and stop service functions
-def start_service(hash_key):   
+def start_service(key):   
     # Define flag as global
     global running_flag
     
@@ -244,7 +250,7 @@ def start_service(hash_key):
     send_command("AT+CMGD=1,4")  # Delete all messages (clearing buffer)
     
     # Start receiving SMS in background
-    recieve_sms(hash_key)
+    recieve_sms(key)
     
     # Close modem connection after stopped
     MODEM.close()

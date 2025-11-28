@@ -1,4 +1,5 @@
-import os, hmac, hashlib
+import os, hmac, hashlib, secrets
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 def check_hash(inputed_password):
     inputed_password = inputed_password.encode('utf-8')
@@ -27,22 +28,35 @@ def hash_password(user_input):
     hash = hmac.new(user_input, browser_key, hashlib.sha512).digest() 
     return hash
 
-# TODO: sort this out 
-def encrypt_data(data, key, salt):
+def encrypt_data(data, key):
     # Symetric encryption of data using AES-256 with HMAC-SHA512 key derivation
+    # key(Password) and salt(browser_key) hashed for form encryption key
     
-    # Key is password
-    # Salt is browser key
-    
-    # Create HMAC object with key and salt
-    hmac_key = hmac.new(salt.encode('utf-8'), key.encode('utf-8'), hashlib.sha512)
-    
-    return 
+    with open('data/crypt_data.txt', 'r') as f:
+        salt = f.readlines()[0].strip()
+        
+    encryption_key = hmac.new(salt.encode('utf-8'), key.encode('utf-8'), hashlib.sha512).digest()[:32] # AES-256 needs 32 bytes key
+    nonce = secrets.token_bytes(24) # 192-bit nonce for AES-GCM
 
-data = "test"
-key = "key"
-salt = "salt"
+    ciphered_message = AESGCM(encryption_key).encrypt(nonce, data.encode('utf-8'), None)
+    encrypted_message = f"{nonce.hex()}:{ciphered_message.hex()}"
+    
+    return encrypted_message
 
-print(encrypt_data(data, key, salt))
-print(encrypt_data(data, key, salt))
-print(encrypt_data(data, key, salt))
+def decrypt_data(encrypted_data, key):
+    with open('data/crypt_data.txt', 'r') as f:
+        salt = f.readlines()[0].strip()
+        
+    # Calculate encryption key
+    encryption_key = hmac.new(salt.encode('utf-8'), key.encode('utf-8'), hashlib.sha512).digest()[:32] # AES-256 needs 32 bytes key
+    
+    # Split nonce and ciphered message
+    nonce_hex, ciphered_message_hex = encrypted_data.split(':')
+    nonce = bytes.fromhex(nonce_hex) # Convert nonce back to bytes
+    ciphered_message = bytes.fromhex(ciphered_message_hex) # Convert ciphered message back to bytes
+    
+    try: # Decrypt message
+        decrypted_message = AESGCM(encryption_key).decrypt(nonce, ciphered_message, None).decode('utf-8')
+        return decrypted_message
+    except Exception as e: # Decryption failed
+        return 1

@@ -44,7 +44,6 @@ async def number_whitelist_page():
     whitelist.content()
 
 
-
 # Generate/read secret to sign users sessionID cookie
 # File doesnt have 3 lines
 if not os.path.exists('data/crypt_data.txt'): 
@@ -57,8 +56,8 @@ if not os.path.exists('data/crypt_data.txt'):
 else:
     with open('data/crypt_data.txt', 'r') as f: # Read the key from file
         storage_key = f.read().strip()
-        
-        
+
+
 ui.run(port=8080, 
        title='BluChat', 
        show=False, 
