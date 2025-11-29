@@ -3,8 +3,9 @@ import hmac, hashlib
 from textwrap import wrap
 
 from functions.phonenumber_functions import load_numbers
+from functions.config_functions import get_config
 
-SERIAL_PORT = "/dev/ttyAMA0"  # Adjust if your modem appears on a different port
+SERIAL_PORT = get_config('modem_interface')  # Adjust if your modem appears on a different port
 BAUD_RATE = 115200
 
 # define serial port as modem
@@ -155,12 +156,20 @@ def handle_message(message, key):
     content = message[3]
     console_log.push(f"Message from {sender}: {content}")
     
-    # Check if sender is authorised
-    if not check_authentication(sender, key, True):
-        console_log.push("Unauthorized sender. Ignoring message.")
-        send_sms(sender, "Your number is not authorized to use this service.")#
-        return
-    console_log.push("Authorized sender. Processing message...")
+    # Check whitelist setting
+    whitelist_toggle = get_config('whitelist_toggle')
+    if whitelist_toggle: # If whitelist is enabled
+        console_log.push("Whitelist is enabled.")    
+        if not check_authentication(sender, key, whitelist_toggle): # If sender is not authorized
+            console_log.push("Unauthorized sender. Ignoring message.")
+            send_sms(sender, "Your number is not authorized to use this service.")#
+            return
+        console_log.push("Authorized sender. Processing message...")
+    else: # Whitelist is disabled
+        console_log.push("Whitelist is disabled.")
+
+
+    
     
     # Auto-reply with segmented message
     segmented_message = wrap(content, 150)  # Split content into 150 character chunks
@@ -182,12 +191,13 @@ def check_authentication(sender, key, toggle):
         return True
     
     authorized_numbers = load_numbers(key)
+    country_code = get_config('country_code')
         
     for entry in authorized_numbers:
         # Convert local UK number to international format
         if not entry['number'].startswith('+'):
             entry['number'] = entry['number'][1:] # Cut first number 
-            entry['number'] = '+44' + entry['number']  # Convert to international format
+            entry['number'] = country_code + entry['number']  # Convert to international format
         
         if entry['number'] == sender and entry['active']:
             return True

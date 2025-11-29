@@ -1,6 +1,6 @@
 import threading
 from nicegui import app, ui
-import main_sms
+import functions.main_sms as main_sms
 from pages.theme import frame, check_timeout
 from functions.encryption_functions import check_hash   
 

@@ -1,6 +1,7 @@
 from nicegui import ui, app
-import os, hmac, hashlib, time
+import os, time, json
 from functions.encryption_functions import hash_password
+from functions.config_functions import initialise_config
 
 colour_bg = '0d1331'  # Very dark blue
 
@@ -20,23 +21,28 @@ def content():
         # First time setup: create data directory and files if they don't exist
         setup_log.push('Setting up data directory and files...')
         os.makedirs("data", exist_ok=True)
-        open("data/config.txt", "a").close()
-        open("data/authorised_numbers.txt", "a").close()   
+        initialise_config()
+        open("data/authorised_numbers.json", "a").close()   
         
         # save the hashed password during setup
         setup_log.push('Storing hashed password...')
         
-        # Write hashed password 2nd line of crypt_data.txt
-        with open("data/crypt_data.txt", "a") as f:
-            f.write(f"\n{hashed_input.hex()}")
+        # Write hashed password 2nd line of crypt_data.json
+        with open("data/crypt_data.json", "r") as f:
+            stored_data = json.load(f)
             
-            app.storage.tab['authenticated'] = True # Set authenticated flag
-            app.storage.tab['last_active'] = time.time() # Set last active time
-            app.storage.tab['password'] = inputed_password # Store password in session storage
-            ui.navigate.to('/home')
+        stored_data['password'] = hashed_input.hex()
+        
+        with open("data/crypt_data.json", "w") as f:
+            json.dump(stored_data, f)
+            
+        app.storage.tab['authenticated'] = True # Set authenticated flag
+        app.storage.tab['last_active'] = time.time() # Set last active time
+        app.storage.tab['password'] = inputed_password # Store password in session storage
+        ui.navigate.to('/home')
 
     with ui.column().classes('absolute-center items-center'):
         ui.label('Welcome to BluChat Setup').classes('text-2xl mt-2 text-white')
-        input_box = ui.input(label='Set a password', password=True).props('input-style="color: white" label-color="white"').classes('w-full max-w-sm mt-4')
+        input_box = ui.input(label='Set a password', password=True).props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('w-full max-w-sm mt-4')
         
         ui.button('Setup', on_click=lambda: check_input(input_box.value)).classes('mt-4 text-white')

@@ -2,9 +2,9 @@ from nicegui import ui, app
 from contextlib import contextmanager
 from functions.check_timeout import check_timeout
 
-COLOUR_BG = '0d1331'  # Very dark blue
-COLOUR_1 = '151b3e'  # Dark blue
-COLOUR_2 = '152851'  # Medium blue
+COLOUR_BG = '0d1331'  # Very dark blue for background
+COLOUR_1 = '151b3e'  # Dark blue for sidebar
+COLOUR_2 = '152851'  # Medium blue for highlights
 
 
 # context manager for page layout with sidebar and theming
@@ -41,8 +41,10 @@ def frame(current_page):
                     classes += f' bg-[#{COLOUR_2}] text-white'
                 ui.link(name, target).classes(classes)
 
+            # Navigation links
             nav_link('Home', '/home')
             nav_link('Whitelist', '/whitelist')
+            nav_link('Settings', '/settings')
         
         # Main Content Area
         with ui.column().style(f'background-color: #{COLOUR_BG}').classes('p-4 w-full h-full text-white'):

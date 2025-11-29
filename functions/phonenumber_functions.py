@@ -11,7 +11,7 @@ from functions.encryption_functions import encrypt_data, decrypt_data
 def load_numbers(key):
     stored_numbers = []
     
-    with open('data/authorised_numbers.txt', 'r') as f:
+    with open('data/authorised_numbers.json', 'r') as f:
         # Try and get data
         try:
             phone_data = json.load(f)
@@ -23,7 +23,7 @@ def load_numbers(key):
                 
         # If fail then assume empty
         except json.JSONDecodeError:
-            print("Error decoding JSON from authorised_numbers.txt")
+            print("Error decoding JSON from authorised_numbers.json")
         
     return stored_numbers
 
@@ -40,10 +40,14 @@ def add_number(number, key):
     encrypted_number = encrypt_data(number, key) # Encrypt number
     
     # Append to end of list 
-    with open('data/authorised_numbers.txt', 'r') as f: 
-        encryted_data = json.load(f) # Load existing encrypted data 
+    try:
+        with open('data/authorised_numbers.json', 'r') as f: 
+            encryted_data = json.load(f) # Load existing encrypted data 
+    except (json.JSONDecodeError, FileNotFoundError):
+        encryted_data = []
+        
     encryted_data.append({"active": True, "number": encrypted_number}) # Add new number
-    with open('data/authorised_numbers.txt', 'w') as f:
+    with open('data/authorised_numbers.json', 'w') as f:
         json.dump(encryted_data, f) # Save updated encrypted data
     
     stored_numbers.append({"active": True, "number": number})
@@ -52,8 +56,11 @@ def add_number(number, key):
 
 def remove_number(number, key):       
     stored_numbers = load_numbers(key) # Load existing numbers
-    with open('data/authorised_numbers.txt', 'r') as f: 
-        encrypted_data = json.load(f) # Load existing encrypted data
+    try:
+        with open('data/authorised_numbers.json', 'r') as f: 
+            encrypted_data = json.load(f) # Load existing encrypted data
+    except (json.JSONDecodeError, FileNotFoundError):
+        return stored_numbers
     
     # Find index of number list 
     index = -1 # set index as not found
@@ -66,7 +73,7 @@ def remove_number(number, key):
     stored_numbers.pop(index)
     encrypted_data.pop(index)
     
-    with open('data/authorised_numbers.txt', 'w') as f:
+    with open('data/authorised_numbers.json', 'w') as f:
         json.dump(encrypted_data, f)
     
     return stored_numbers
@@ -74,8 +81,11 @@ def remove_number(number, key):
 
 def toggle_number(number, key): 
     stored_numbers = load_numbers(key)
-    with open('data/authorised_numbers.txt', 'r') as f: 
-        encrypted_data = json.load(f) # Load existing encrypted data
+    try:
+        with open('data/authorised_numbers.json', 'r') as f: 
+            encrypted_data = json.load(f) # Load existing encrypted data
+    except (json.JSONDecodeError, FileNotFoundError):
+        return 2
     
     
     # Find index of number list 
@@ -94,7 +104,7 @@ def toggle_number(number, key):
     encrypted_data[index]["active"] = not encrypted_data[index]["active"]
     
     # Save the updated list to the file
-    with open('data/authorised_numbers.txt', 'w') as f:
+    with open('data/authorised_numbers.json', 'w') as f:
         json.dump(encrypted_data, f)
     
     return stored_numbers

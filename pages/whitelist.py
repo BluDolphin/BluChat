@@ -50,10 +50,9 @@ def content():
 
     
     with frame('Whitelist'):
-        ui.label('Manage whitelisted phone numbers').classes('text-2xl mt-2')
-        #TODO: FIX INPUT SHOWING ENCRYPTED BEFORE REFRESH
+        ui.label('Manage whitelisted (allowed) phone numbers').classes('text-2xl mt-2')
         with ui.row().classes('w-full items-center'):
-            new_number_input = ui.input(label='Phone Number').props('input-style="color: white" label-color="white"').classes('w-64')
+            new_number_input = ui.input(label='Phone Number').props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('w-64')
             ui.button('Add', on_click=lambda: add_value(new_number_input.value)).classes('ml-4')
             
         

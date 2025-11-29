@@ -14,12 +14,13 @@ def content():
             app.storage.tab['password'] = inputed_password # Store password in session
             ui.navigate.to('/home')
         else:
+            input_box.value = ''  # Clear input box
             return ui.notify('Incorrect password', color='red')
        
 
     with ui.column().classes('absolute-center items-center'):
         ui.label('BluChat login').classes('text-2xl mt-2 text-white')
         
-        input_box = ui.input(label='Enter password', password=True).props('input-style="color: white" label-color="white"').classes('w-full max-w-sm mt-4')
+        input_box = ui.input(label='Enter password', password=True).props('underline dark color="dark-gray"input-style="color: white" label-color="white"').classes('w-full max-w-sm mt-4')
         
         ui.button('Login', on_click=lambda: check_input(input_box.value)).classes('mt-4 text-white')
