@@ -48,7 +48,7 @@ def add_number(number, key):
         
     encryted_data.append({"active": True, "number": encrypted_number}) # Add new number
     with open('data/authorised_numbers.json', 'w') as f:
-        json.dump(encryted_data, f) # Save updated encrypted data
+        json.dump(encryted_data, f, indent=4) # Save updated encrypted data
     
     stored_numbers.append({"active": True, "number": number})
     return stored_numbers
@@ -74,7 +74,7 @@ def remove_number(number, key):
     encrypted_data.pop(index)
     
     with open('data/authorised_numbers.json', 'w') as f:
-        json.dump(encrypted_data, f)
+        json.dump(encrypted_data, f, indent=4) # Save updated encrypted data
     
     return stored_numbers
 
@@ -105,7 +105,7 @@ def toggle_number(number, key):
     
     # Save the updated list to the file
     with open('data/authorised_numbers.json', 'w') as f:
-        json.dump(encrypted_data, f)
+        json.dump(encrypted_data, f, indent=4)
     
     return stored_numbers
 
