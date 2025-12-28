@@ -5,6 +5,16 @@ import json
 # Each AI config is a nested dictionary with usable (bool), api_key (str), and model (str) keys
 
 def initialise_config(location_data):
+    # Define default models for each LLM
+    # These can be changed later via settings page
+    # These are set as the lastest methods available as of December 2025
+    gemini_default_model = 'gemini-flash-latest'
+    mistral_default_model = 'mistral-small-latest'
+    chatgpt_default_model = 'gpt-5-mini'
+    deepseek_default_model = 'deepseek-chat'
+    claude_default_model = 'claude-haiku-4.5'
+    
+    
     default_config = {
         'whitelist_toggle': False,
         'country_code': '',
@@ -13,11 +23,11 @@ def initialise_config(location_data):
         'prompt_instructions': '',
         'active_llm': '',
         'llm_configs': {
-            'gemini_config': {'usable': False, 'api_key': '', 'model': ''},
-            'chatgpt_config': {'usable': False, 'api_key': '', 'model': ''},
-            'deepseek_config': {'usable': False, 'api_key': '', 'model': ''}, 
-            'claude_config': {'usable': False, 'api_key': '', 'model': ''},
-            'mistral_config': {'usable': False, 'api_key': '', 'model': ''}
+            'gemini_config': {'usable': False, 'api_key': '', 'model': gemini_default_model},
+            'mistral_config': {'usable': False, 'api_key': '', 'model': mistral_default_model},
+            'chatgpt_config': {'usable': False, 'api_key': '', 'model': chatgpt_default_model},
+            'deepseek_config': {'usable': False, 'api_key': '', 'model': deepseek_default_model}, 
+            'claude_config': {'usable': False, 'api_key': '', 'model': claude_default_model}
         }
 
     }

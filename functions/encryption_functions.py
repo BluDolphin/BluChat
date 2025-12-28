@@ -56,12 +56,13 @@ def decrypt_data(encrypted_data, key):
     # Calculate encryption key
     encryption_key = hmac.new(salt.encode('utf-8'), key, hashlib.sha512).digest()[:32] # AES-256 needs 32 bytes key
     
-    # Split nonce and ciphered message
-    nonce_hex, ciphered_message_hex = encrypted_data.split(':')
-    nonce = bytes.fromhex(nonce_hex) # Convert nonce back to bytes
-    ciphered_message = bytes.fromhex(ciphered_message_hex) # Convert ciphered message back to bytes
+    try:
+        # Split nonce and ciphered message
+        nonce_hex, ciphered_message_hex = encrypted_data.split(':')
+        nonce = bytes.fromhex(nonce_hex) # Convert nonce back to bytes
+        ciphered_message = bytes.fromhex(ciphered_message_hex) # Convert ciphered message back to bytes
     
-    try: # Decrypt message
+        # Decrypt message
         decrypted_message = AESGCM(encryption_key).decrypt(nonce, ciphered_message, None).decode('utf-8')
         return decrypted_message
     except Exception as e: # Decryption failed
