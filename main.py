@@ -18,11 +18,6 @@ async def index_page():
 @ui.page('/setup')
 async def setup_page():
     await ui.context.client.connected()
-    # Prevent access if already setup
-    if os.path.exists('data/config.json') and os.path.exists('data/authorised_numbers.json'):
-        ui.navigate.to('/login')
-        return
-    
     # If authenticated, redirect to home
     if app.storage.tab.get('authenticated', False):
         ui.navigate.to('/login')
@@ -33,12 +28,7 @@ async def setup_page():
     
 @ui.page('/login')
 async def login_page():
-    await ui.context.client.connected()  
-    # If setup not completed, redirect to setup
-    if not os.path.exists('data/config.json') or not os.path.exists('data/authorised_numbers.json'):       
-        ui.navigate.to('/setup')
-        return
-     
+    await ui.context.client.connected()   
     # If authenticated, redirect to home
     if app.storage.tab.get('authenticated', False):
         ui.navigate.to('/home')

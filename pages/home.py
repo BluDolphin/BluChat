@@ -1,7 +1,6 @@
 import threading
 from nicegui import app, ui
-#TODO; Uncomment temp disabled as on laptop
-# import functions.main_sms as main_sms
+import functions.main_sms as main_sms
 from pages.theme import frame, check_timeout
 from functions.encryption_functions import check_hash   
 
@@ -30,7 +29,7 @@ def content():
         with ui.row().classes('w-full no-wrap gap-0'):
             start_button = ui.button('Start Chatbot', on_click=start_bot, color='green').classes('mt-4')
             stop_button = ui.button('Stop Chatbot', on_click=stop_bot, color='red').classes('mt-4 ml-4')
-        home_log = ui.log(max_lines=100).classes('mt-4 w-full rounded')
+        home_log = ui.log(max_lines=100).classes('mt-4 h-100 w-full')
         
         main_sms.console_log.add(home_log) # Add home_log to shared console log
         ui.context.client.on_disconnect(lambda: main_sms.console_log.remove(home_log)) # Remove on disconnect

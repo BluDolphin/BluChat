@@ -28,7 +28,7 @@ def frame(current_page):
         ui.timer(10.0, lambda: check_timeout()) # Check for timeout every 10 seconds
         
         # Sidebar: COLOUR_1, full height, width 64, padding 4
-        with ui.column().style(f'background-color: #{COLOUR_1}').classes('w-64 h-full p-4 overflow-y-auto'):
+        with ui.column().style(f'background-color: #{COLOUR_1}').classes('w-64 h-full p-4'):
             # Sidebar Title
             ui.label('Menu').classes('text-xl font-bold mb-4 text-white') 
             
@@ -47,5 +47,5 @@ def frame(current_page):
             nav_link('Settings', '/settings')
         
         # Main Content Area
-        with ui.column().style(f'background-color: #{COLOUR_BG}').classes('p-4 flex-1 h-full text-white overflow-y-auto overflow-x-auto'):
+        with ui.column().style(f'background-color: #{COLOUR_BG}').classes('p-4 w-full h-full text-white'):
             yield  # Pause here to inject content into the main area
