@@ -12,7 +12,7 @@ BAUD_RATE = 115200
 MODEM = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=5)
 MODEM.close()  # Ensure modem is closed initially
 
-running_flag = False
+RUNNING_FLAG = False  # Flag to control service state (startup and shutdown)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -48,7 +48,7 @@ def send_command(command, delay=1):
 def recieve_sms(key):    
     messages = []  # Initialize empty list to store messages
     
-    while running_flag:               
+    while RUNNING_FLAG:               
         response = send_command('at+cmgl="REC UNREAD"')  # read all unread messages
         
         if "+CMGL:" in response: # +CMTI: is used as a notification for new messages
@@ -237,20 +237,20 @@ def send_sms(phone, message):
 # start and stop service functions
 def start_service(key):   
     # Define flag as global
-    global running_flag
+    global RUNNING_FLAG
     
     # Prevent multiple instances
-    if running_flag == True:
+    if RUNNING_FLAG == True:
         return
     
-    running_flag = True
+    RUNNING_FLAG = True
     MODEM.open()  # Open modem connection
 
     # Check modem connection
     if "OK" not in send_command("AT"):
         console_log.push("❌ Modem not responding. Check connection.")
         console_log.push("Aborted start.")
-        running_flag = False
+        RUNNING_FLAG = False
         return
     
     # Setup modem
@@ -267,13 +267,13 @@ def start_service(key):
     console_log.push("Modem connection closed.")
 
 def stop_service():
-    global running_flag # Define flag as global
+    global RUNNING_FLAG # Define flag as global
     
     # if service is already stopped, do nothing
-    if running_flag == False:
+    if RUNNING_FLAG == False:
         return
     
-    running_flag = False
+    RUNNING_FLAG = False
     # Stopping message
     console_log.push("Stopping SMS service...")
         
