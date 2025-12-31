@@ -80,6 +80,7 @@ async def settings_page():
     # Show settings page
     settings.content()
 
+
 # Generate/read secret to sign users sessionID cookie
 # File doesnt have 3 lines
 if not os.path.exists('data/crypt_data.json'): 

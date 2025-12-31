@@ -235,7 +235,7 @@ def send_sms(phone, message):
 
 
 # start and stop service functions
-def start_service(key):   
+def start_sms_service(key):   
     # Define flag as global
     global RUNNING_FLAG
     
@@ -266,7 +266,7 @@ def start_service(key):
     MODEM.close()
     console_log.push("Modem connection closed.")
 
-def stop_service():
+def stop_sms_service():
     global RUNNING_FLAG # Define flag as global
     
     # if service is already stopped, do nothing

@@ -1,8 +1,9 @@
 from nicegui import app, ui
-import copy
+import copy, asyncio
 from pages.theme import frame
 from functions.config_functions import load_all_config, update_config
 from functions.encryption_functions import encrypt_data, decrypt_data
+from functions.llm_functions import check_llm_config, update_llm_values
 
 SETTING_BOX_COLOUR = '0F132D'
 
@@ -38,7 +39,7 @@ def content():
         # --Check prompt instructions change--
         # Decrypt stored instructions for comparison
         stored_instructions = str(decrypt_data(config_data.get('prompt_instructions', ''), app.storage.tab.get('password')))
-        if llm_prompt_input.value.strip() != stored_instructions:
+        if str(llm_prompt_input.value).strip() != stored_instructions:
             llm_prompt_button.enable()
         else:
             llm_prompt_button.disable()
@@ -151,38 +152,37 @@ def content():
         ui.notify('LLM prompt instructions updated.', color='green')
         llm_prompt_button.disable()
     
-    # Update LLM configuration
-    def llm_config_update(config_target, new_api_key, new_llm_model, button):
+    # Update LLM configuration 
+    # Using async to avoid blocking ui during validation
+    async def llm_config_update(llm_name, new_api_key, new_llm_model, button):
         # Pass config_data as its used to check for updates to input fields
-        nonlocal config_data # Use nonlocal to access config_data
         nonlocal stored_llm_config # Use nonlocal to access stored_llm_config
 
-        # check validity of api
-        pass # Placeholder for actual API key validation logic will use a function specified by config_target to identify service
+        ui.notify(f'Validating {llm_name} configuration. Please Wait...', color='orange')
+        button.disable() # Disable button to prevent multiple clicks
         
+        # check validity of entered api config
+        # Use await to pause function while thread runs
+        response = await asyncio.to_thread(check_llm_config, llm_name, app.storage.tab.get('password'), (new_api_key, new_llm_model))
+        if response != 0:
+            ui.notify(f'Error validating LLM configuration: {response[0]}:{response[1]}', color='red')
+            button.enable() # Re-enable button
+            return
         
+        update_llm_values(llm_name, new_api_key, new_llm_model, app.storage.tab.get('password'))
+
         # Save unencrypted key for displaying to user
-        stored_llm_config[config_target]['api_key'] = new_api_key 
-        stored_llm_config[config_target]['model'] = new_llm_model
-        
-        # Encrypt and store the new configuration
-        new_llm_configs = config_data['llm_configs'] # Get existing llm_configs (encrypted) and save to a variable
-        targets_config = new_llm_configs[config_target] # Get existing target LLM config
-        encrypted_api_key = encrypt_data(new_api_key, app.storage.tab.get('password')) # Encrypt API key before storing
-        
-        # Update with new values
-        targets_config['api_key'] = encrypted_api_key
-        targets_config['model'] = new_llm_model 
-        
-        new_llm_configs[config_target] = targets_config # Save changes back to llm_configs
-        config_data = update_config('llm_configs', new_llm_configs) # Save updated llm_configs back to main config
+        stored_llm_config[f"{llm_name}_config"]['api_key'] = new_api_key 
+        stored_llm_config[f"{llm_name}_config"]['model'] = new_llm_model   
         
         ui.notify('LLM configuration updated.', color='green')
+        button.props('color=green') # Change button to green to indicate valid config
         button.disable()
     
-    
+     
     config_data = load_all_config() # Load current config data
-    stored_llm_config = copy.deepcopy(config_data['llm_configs']) # Deep copy to avoid modifying original data
+    stored_llm_config = copy.deepcopy(config_data['llm_configs']) # Deep copy to avoid modifying original data 
+    
     
     # Decrypt stored API keys for display
     # Store decrypted keys in the copied dictionary only
@@ -195,7 +195,15 @@ def content():
         else:
             stored_llm_config[llm]['api_key'] = ''
        
+    # Determine button colours for LLM's 
+    gemini_button_colour = 'green' if stored_llm_config['gemini_config'].get('usable') else 'red'
+    mistral_button_colour = 'green' if stored_llm_config['mistral_config'].get('usable') else 'red'
+    chatgpt_button_colour = 'green' if stored_llm_config['chatgpt_config'].get('usable') else 'red'
+    deepseek_button_colour = 'green' if stored_llm_config['deepseek_config'].get('usable') else 'red'
+    claude_button_colour = 'green' if stored_llm_config['claude_config'].get('usable') else 'red'
     
+    
+    # Main content within the themed frame    
     with frame('Settings'):
         ui.label('Settings Page').classes('text-2xl mt-2')
         
@@ -248,27 +256,27 @@ def content():
                 with ui.row(): # Gemini
                     gemini_api_input = ui.input('Gemini API Key', value=stored_llm_config['gemini_config'].get('api_key', ''), on_change=lambda e: check_for_changes()).props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('mt-4 mr-4')
                     gemini_model_input = ui.input(label='Gemini Model', value=stored_llm_config['gemini_config'].get('model', ''), on_change=lambda e: check_for_changes()).props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('mt-4 mr-4')
-                    gemini_save_button = ui.button('Save Settings', on_click=lambda: llm_config_update('gemini_config', gemini_api_input.value.strip(), gemini_model_input.value, gemini_save_button)).classes('mt-4')
+                    gemini_save_button = ui.button('Save Settings', color=gemini_button_colour, on_click=lambda: llm_config_update('gemini', gemini_api_input.value.strip(), gemini_model_input.value, gemini_save_button)).classes('mt-4')
                     gemini_save_button.disable()
                 with ui.row(): # Mistral
                     mistral_api_input = ui.input('Mistral API Key', value=stored_llm_config['mistral_config'].get('api_key', ''), on_change=lambda e: check_for_changes()).props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('mt-4 mr-4')
                     mistral_model_input = ui.input(label='Mistral Model', value=stored_llm_config['mistral_config'].get('model', ''), on_change=lambda e: check_for_changes()).props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('mt-4 mr-4')
-                    mistral_save_button = ui.button('Save Settings', on_click=lambda: llm_config_update('mistral_config', mistral_api_input.value.strip(), mistral_model_input.value, mistral_save_button)).classes('mt-4')
+                    mistral_save_button = ui.button('Save Settings', color=mistral_button_colour, on_click=lambda: llm_config_update('mistral', mistral_api_input.value.strip(), mistral_model_input.value, mistral_save_button)).classes('mt-4')
                     mistral_save_button.disable()
                     
                 # Paid tiers
                 with ui.row(): # ChatGPT
                     chatgpt_api_input = ui.input('ChatGPT API Key', value=stored_llm_config['chatgpt_config'].get('api_key', ''), on_change=lambda e: check_for_changes()).props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('mt-4 mr-4')
                     chatgpt_model_input = ui.input(label='ChatGPT Model', value=stored_llm_config['chatgpt_config'].get('model', ''), on_change=lambda e: check_for_changes()).props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('mt-4 mr-4')
-                    chatgpt_save_button = ui.button('Save Settings', on_click=lambda: llm_config_update('chatgpt_config', chatgpt_api_input.value.strip(), chatgpt_model_input.value, chatgpt_save_button)).classes('mt-4')
+                    chatgpt_save_button = ui.button('Save Settings', color=chatgpt_button_colour, on_click=lambda: llm_config_update('chatgpt', chatgpt_api_input.value.strip(), chatgpt_model_input.value, chatgpt_save_button)).classes('mt-4')
                     chatgpt_save_button.disable()
                 with ui.row(): # DeepSeek
                     deepseek_api_input = ui.input('DeepSeek API Key', value=stored_llm_config['deepseek_config'].get('api_key', ''), on_change=lambda e: check_for_changes()).props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('mt-4 mr-4')
                     deepseek_model_input = ui.input(label='DeepSeek Model', value=stored_llm_config['deepseek_config'].get('model', ''), on_change=lambda e: check_for_changes()).props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('mt-4 mr-4')
-                    deepseek_save_button = ui.button('Save Settings', on_click=lambda: llm_config_update('deepseek_config', deepseek_api_input.value.strip(), deepseek_model_input.value, deepseek_save_button)).classes('mt-4')
+                    deepseek_save_button = ui.button('Save Settings', color=deepseek_button_colour, on_click=lambda: llm_config_update('deepseek', deepseek_api_input.value.strip(), deepseek_model_input.value, deepseek_save_button)).classes('mt-4')
                     deepseek_save_button.disable()
                 with ui.row(): # Claude
                     claude_api_input = ui.input('Claude API Key', value=stored_llm_config['claude_config'].get('api_key', ''), on_change=lambda e: check_for_changes()).props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('mt-4 mr-4')
                     claude_model_input = ui.input(label='Claude Model', value=stored_llm_config['claude_config'].get('model', ''), on_change=lambda e: check_for_changes()).props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('mt-4 mr-4')
-                    claude_save_button = ui.button('Save Settings', on_click=lambda: llm_config_update('claude_config', claude_api_input.value.strip(), claude_model_input.value, claude_save_button)).classes('mt-4')
+                    claude_save_button = ui.button('Save Settings', color=claude_button_colour, on_click=lambda: llm_config_update('claude', claude_api_input.value.strip(), claude_model_input.value, claude_save_button)).classes('mt-4')
                     claude_save_button.disable()

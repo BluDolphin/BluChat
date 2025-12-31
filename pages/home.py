@@ -1,7 +1,7 @@
 import threading
 from nicegui import app, ui
 #TODO; Uncomment temp disabled as on laptop
-# import functions.main_sms as main_sms
+#from functions.sms_functions import start_sms_service, stop_sms_service
 from pages.theme import frame, check_timeout
 from functions.encryption_functions import check_hash   
 
@@ -14,13 +14,13 @@ def content():
         password = app.storage.tab.get('password', '')
         
         # Start thread and pass password for whitelist decryption
-        threading.Thread(target=main_sms.start_service, args=(password,)).start() # start in new thread
+        threading.Thread(target=start_sms_service, args=(password)).start() # start in new thread
         return
     
     # Stop the chatbot service
     def stop_bot():
         check_timeout(True)  # Reset timeout timer
-        main_sms.stop_service()
+        stop_sms_service()
         return
     
 
@@ -32,8 +32,8 @@ def content():
             stop_button = ui.button('Stop Chatbot', on_click=stop_bot, color='red').classes('mt-4 ml-4')
         home_log = ui.log(max_lines=100).classes('mt-4 w-full rounded')
         
-        main_sms.console_log.add(home_log) # Add home_log to shared console log
-        ui.context.client.on_disconnect(lambda: main_sms.console_log.remove(home_log)) # Remove on disconnect
+        start_sms_service.console_log.add(home_log) # Add home_log to shared console log
+        ui.context.client.on_disconnect(lambda: start_sms_service.console_log.remove(home_log)) # Remove on disconnect
     
     
         
