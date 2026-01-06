@@ -30,7 +30,7 @@ def content():
     def remove_value(number):
         check_timeout(True) # Check for session timeout & reset timer
         # Remove number and get updated list
-        stored_numbers=remove_number(number, app.storage.tab.get('password')) # 
+        stored_numbers=remove_number(number, app.storage.tab.get('password')) 
         table.rows = stored_numbers # Update table rows
 
     def toggle_value(row):

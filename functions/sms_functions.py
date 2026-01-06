@@ -1,9 +1,9 @@
 import serial, time, datetime, logging
-import hmac, hashlib
 from textwrap import wrap
 
 from functions.phonenumber_functions import load_numbers
 from functions.config_functions import get_config
+from functions.sms_functions import call_llm_api
 
 SERIAL_PORT = get_config('modem_interface')  # Adjust if your modem appears on a different port
 BAUD_RATE = 115200
@@ -32,7 +32,7 @@ class SharedHomeLog:
         for logger in self._loggers:
             logger.push(message) # Push message to all loggers
 
-console_log = SharedHomeLog()
+CONSOLE_LOG = SharedHomeLog()
 
 
 # Function to send AT commands and read responses
@@ -40,7 +40,7 @@ def send_command(command, delay=1):
     MODEM.write((command + '\r').encode())
     time.sleep(delay)
     response = MODEM.read_all().decode(errors='ignore')
-    console_log.push(f"> {command}\n{response}")
+    CONSOLE_LOG.push(f"> {command}\n{response}")
     return response
 
 
@@ -52,7 +52,7 @@ def recieve_sms(key):
         response = send_command('at+cmgl="REC UNREAD"')  # read all unread messages
         
         if "+CMGL:" in response: # +CMTI: is used as a notification for new messages
-            console_log.push("New SMS received")
+            CONSOLE_LOG.push("New SMS received")
 
             messages = parse_response(response, messages) # Send response to parser function
             
@@ -68,7 +68,7 @@ def recieve_sms(key):
         
         # Delete message off modem and remove handled messages from main list
         for sent_msg in sent_messages: # For each message that has been handled
-            console_log.push(f"Deleting messages with IDs: {sent_msg[0]}")
+            CONSOLE_LOG.push(f"Deleting messages with IDs: {sent_msg[0]}")
             for msg_id in sent_msg[0]:
                 send_command(f'AT+CMGD={msg_id}')
             messages.remove(sent_msg) # Remove from main messages list
@@ -87,7 +87,7 @@ def parse_response(unread_response, current_parsed):
     for i in range(len(unread_response)):
         # Check for message header
         if unread_response[i].startswith('+CMGL:'):
-            console_log.push(f'Found message header: {unread_response[i]}') 
+            CONSOLE_LOG.push(f'Found message header: {unread_response[i]}') 
             
             # Split the header line into components
             active_response = unread_response[i].split(',') # split by comma
@@ -132,7 +132,7 @@ def parse_response(unread_response, current_parsed):
             for message in current_parsed: # For each stored message
                 # If timestamp is within 5 seconds and matching sender
                 if message[1] == active_response[1] and int(message[2])-10 <= int(active_response[2]) <= int(message[2])+10:  
-                    console_log.push('Multi message found, appending content.')
+                    CONSOLE_LOG.push('Multi message found, appending content.')
                     
                     message[2] = int(active_response[2])  # Update timestamp to latest message to deal with further multi SMS
                     message[3] += active_response[3]  # Append SMS content to existing message
@@ -145,7 +145,7 @@ def parse_response(unread_response, current_parsed):
                     current_parsed.append(active_response)
                     break
                 
-    console_log.push(current_parsed)        
+    CONSOLE_LOG.push(current_parsed)        
     return current_parsed
 
 
@@ -154,38 +154,39 @@ def parse_response(unread_response, current_parsed):
 def handle_message(message, key):
     sender = message[1]
     content = message[3]
-    console_log.push(f"Message from {sender}: {content}")
+    CONSOLE_LOG.push(f"Message from {sender}: {content}")
     
     # Check whitelist setting
     whitelist_toggle = get_config('whitelist_toggle')
     if whitelist_toggle: # If whitelist is enabled
-        console_log.push("Whitelist is enabled.")    
+        CONSOLE_LOG.push("Whitelist is enabled.")    
         if not check_authentication(sender, key, whitelist_toggle): # If sender is not authorized
-            console_log.push("Unauthorized sender. Ignoring message.")
+            CONSOLE_LOG.push("Unauthorized sender. Ignoring message.")
             send_sms(sender, "Your number is not authorized to use this service.")#
             return
-        console_log.push("Authorized sender. Processing message...")
+        CONSOLE_LOG.push("Authorized sender. Processing message...")
     else: # Whitelist is disabled
-        console_log.push("Whitelist is disabled.")
+        CONSOLE_LOG.push("Whitelist is disabled.")
 
-
-    
+    # Call LLM to generate response
+    llm_response = call_llm_api(content, key)
     
     # Auto-reply with segmented message
-    segmented_message = wrap(content, 150)  # Split content into 150 character chunks
+    segmented_message = wrap(llm_response, 150)  # Split content into 150 character chunks
     send_sms('07591432022', f"Auto-reply: Received your message, processing...")
         
     for indivitual_segment in segmented_message:
         run_code = send_sms(sender, indivitual_segment)
         
         if run_code == 0:
-            console_log.push("✅ SMS sent successfully!")
+            CONSOLE_LOG.push("✅ SMS sent successfully!")
         elif run_code == 1:
-            console_log.push("❌ SMS sending failed.")
+            CONSOLE_LOG.push("❌ SMS sending failed.")
         else:
-            console_log.push(f"❌ An error occurred: {run_code}")
-        
+            CONSOLE_LOG.push(f"❌ An error occurred: {run_code}")
 
+
+# Function to check if sender is authorised
 def check_authentication(sender, key, toggle):
     if toggle == False:
         return True
@@ -215,7 +216,7 @@ def send_sms(phone, message):
         # Check if > was in response as its needed to send messages
         # If no then a problem occurred
         if ">" not in response:
-            console_log.push("❌ Did not receive SMS prompt. Aborting.")
+            CONSOLE_LOG.push("❌ Did not receive SMS prompt. Aborting.")
             return
 
         # Ctrl+Z ends the message
@@ -224,7 +225,7 @@ def send_sms(phone, message):
         
         # Get modem response
         response = MODEM.read_all().decode(errors='ignore') 
-        console_log.push(f"SMS send response:\n{response}")
+        CONSOLE_LOG.push(f"SMS send response:\n{response}")
 
         if "OK" in response:
             return 0
@@ -248,13 +249,13 @@ def start_sms_service(key):
 
     # Check modem connection
     if "OK" not in send_command("AT"):
-        console_log.push("❌ Modem not responding. Check connection.")
-        console_log.push("Aborted start.")
+        CONSOLE_LOG.push("❌ Modem not responding. Check connection.")
+        CONSOLE_LOG.push("Aborted start.")
         RUNNING_FLAG = False
         return
     
     # Setup modem
-    console_log.push("Starting SMS service...")
+    CONSOLE_LOG.push("Starting SMS service...")
     send_command("ATE0")    # Turn off command echo
     send_command("AT+CMGF=1")  # Set SMS to text mode
     send_command("AT+CMGD=1,4")  # Delete all messages (clearing buffer)
@@ -264,7 +265,7 @@ def start_sms_service(key):
     
     # Close modem connection after stopped
     MODEM.close()
-    console_log.push("Modem connection closed.")
+    CONSOLE_LOG.push("Modem connection closed.")
 
 def stop_sms_service():
     global RUNNING_FLAG # Define flag as global
@@ -275,5 +276,5 @@ def stop_sms_service():
     
     RUNNING_FLAG = False
     # Stopping message
-    console_log.push("Stopping SMS service...")
+    CONSOLE_LOG.push("Stopping SMS service...")
         

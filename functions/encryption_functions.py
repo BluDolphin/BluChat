@@ -46,7 +46,11 @@ def encrypt_data(data, key):
     
     return encrypted_message
 
-def decrypt_data(encrypted_data, key):
+def decrypt_data(encrypted_data, key):  
+    # Handle empty input 
+    if encrypted_data == '' or encrypted_data is None:
+        return ''
+    
     with open('data/crypt_data.json', 'r') as f:
         salt = json.load(f)['browser_key']
 

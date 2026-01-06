@@ -7,6 +7,7 @@ from functions.encryption_functions import decrypt_data, encrypt_data
 def check_llm_config(llm_name, encryption_key, test_config=None):   
     if llm_name == 'gemini':
         response = gemini_call('test', encryption_key, test_config) # Test call to check validity
+        
         if isinstance(response, tuple): # If error returned
             update_llm_usability(llm_name, False) # Update usability status to False
             return response # Return error code and message
@@ -50,7 +51,54 @@ def check_llm_config(llm_name, encryption_key, test_config=None):
         update_llm_usability(llm_name, True) # Update usability status to True
         return 0 # Return successful response
 
+
+# Main llm call function
+def call_llm_api(prompt, encryption_key):
+    active_llm = get_config('active_llm') # Get active llm from config
     
+    # Parse and Handle prompt 
+    # Get stored instructions and decrypt
+    stored_instructions_encrypted = get_config('prompt_instructions')
+    stored_instructions = decrypt_data(stored_instructions_encrypted, encryption_key)
+    
+    # Create full user request with instructions
+    user_request = f"Response Instructions: {stored_instructions}\nUser Request: {prompt}"
+    
+    # Filter based on active llm
+    if active_llm == 'Gemini':
+        llm_response = gemini_call(user_request, encryption_key)
+    elif active_llm == 'Mistral':
+        llm_response = mistral_call(user_request, encryption_key)
+    elif active_llm == 'Chatgpt':
+        llm_response = chatgpt_call(user_request, encryption_key)
+    elif active_llm == 'DeepSeek':
+        llm_response = deepseek_call(user_request, encryption_key)
+    elif active_llm == 'Claude':
+        llm_response = claude_call(user_request, encryption_key)
+    else:
+        return ('No Active LLM Configured', 'Please configure an active LLM in the settings page.')
+
+    # If error returned
+    if isinstance(llm_response, tuple): 
+        return f'LLM Error: {llm_response[0]} : {llm_response[1]}' # Return error code and message
+    
+    # Return successful response
+    return llm_response
+
+
+# Update active llm in config
+def update_active_llm(llm_name):
+    return update_config('active_llm', llm_name) 
+
+
+# Update prompt instructions in config
+def update_instructions(new_instructions, encryption_key):
+    encrypted_instructions = encrypt_data(new_instructions, encryption_key) # Encrypt new instructions
+
+    return update_config('prompt_instructions', encrypted_instructions) # Save updated config and return the full config
+
+
+# Update llm usability status in config
 def update_llm_usability(llm_name, usable_status):
     llm_configs = get_config('llm_configs') # Load current LLM configurations
     
@@ -85,22 +133,24 @@ def gemini_call(prompt, encryption_key, test_config=None):
     from google import genai
     from google.genai import types
     
-    # Define prefered model variable for assining for either testing or using stored config
-    preferred_model = ''
     
-    # If test api and model provided, use those (for testing validity)'
-    if test_config:
-        client = genai.Client(api_key=test_config[0]) # Initialize Gemini client with test API
-        preferred_model = test_config[1]
-        
-    # Else use stored config
-    else:
-        gemini_config = get_config('llm_configs')['gemini_config'] # Load Gemini configuration
-        client = genai.Client(api_key=decrypt_data(gemini_config['api_key'], encryption_key)) # Initialize Gemini client with decrypted API key
-        preferred_model = gemini_config['model']
-        
-
     try: # Attempt to generate content
+        # Define prefered model variable for assining for either testing or using stored config
+        preferred_model = ''
+        
+        # If test api and model provided, use those (for testing validity)'
+        if test_config:
+            client = genai.Client(api_key=test_config[0]) # Initialize Gemini client with test API
+            preferred_model = test_config[1]
+            
+        # Else use stored config
+        else:
+            gemini_config = get_config('llm_configs')['gemini_config'] # Load Gemini configuration
+            client = genai.Client(api_key=decrypt_data(gemini_config['api_key'], encryption_key)) # Initialize Gemini client with decrypted API key
+            preferred_model = gemini_config['model']
+            
+
+
         response = client.models.generate_content(
             model=preferred_model, # Specify model from configuration
             contents=prompt, # Provide the prompt
@@ -112,7 +162,10 @@ def gemini_call(prompt, encryption_key, test_config=None):
             )
         return response.text
     except Exception as e: # If failes
-        return (e.code, e.message) # Return error message (error code, error message)
+        try:
+            return (e.status_code, e.body) # Return error message (error code, error message)
+        except:
+            return ('Failed', e.args[0]) # Otherwise return generic error
 
 # Mistral llm call
 def mistral_call(prompt, encryption_key, test_config=None):
@@ -121,19 +174,19 @@ def mistral_call(prompt, encryption_key, test_config=None):
     # Define prefered model variable for assining for either testing or using stored config  
     prefered_model = ''
     
-    # If test api and model provided, use those (for testing validity)'
-    if test_config:
-        client = Mistral(api_key=test_config[0]) # Initialize Mistral client with test API
-        prefered_model = test_config[1]
-        
-    # Else use stored config
-    else:
-        mistral_config = get_config('llm_configs')['mistral_config'] # Load Mistral configuration
-        client = Mistral(api_key=decrypt_data(mistral_config['api_key'], encryption_key))
-        prefered_model = mistral_config['model']
-    
-    
     try: # Attempt to generate content
+        # If test api and model provided, use those (for testing validity)'
+        if test_config:
+            client = Mistral(api_key=test_config[0]) # Initialize Mistral client with test API
+            prefered_model = test_config[1]
+            
+        # Else use stored config
+        else:
+            mistral_config = get_config('llm_configs')['mistral_config'] # Load Mistral configuration
+            client = Mistral(api_key=decrypt_data(mistral_config['api_key'], encryption_key))
+            prefered_model = mistral_config['model']
+        
+        
         response = client.chat.complete(
             model=prefered_model,
             messages = [
@@ -145,27 +198,31 @@ def mistral_call(prompt, encryption_key, test_config=None):
         )
         return response.choices[0].message.content
     except Exception as e: # If failes
-        return (e.status_code, e.body)
+        try:
+            return (e.status_code, e.body) # Return error message (error code, error message)
+        except:
+            return ('Failed', e.args[0]) # Otherwise return generic error
+
 
 # Chatgpt llm call
 # TODO: THIS NEEDS TO BE TESTED, ACCOUNT ISSUE WITH OPENAI SO TESTING ISNT POSSIBLE RIGHT NOW
 def chatgpt_call(prompt, encryption_key, test_config=None):
     from openai import OpenAI
     
-    # Define prefered model variable for assining for either testing or using stored config  
-    prefered_model = ''
-    
-    # If test api and model provided, use those (for testing validity)'
-    if test_config:
-        client = OpenAI(api_key=test_config[0]) # Initialize ChatGPT client with test API
-        chatgpt_config = {'model': test_config[1]}
-    # Else use stored config
-    else:
-        chatgpt_config = get_config('llm_configs')['chatgpt_config'] # Load ChatGPT configuration
-        client = OpenAI(api_key=decrypt_data(chatgpt_config['api_key'], encryption_key))
-        prefered_model = chatgpt_config['model']
+    try: # Attempt to generate content
+        # Define prefered model variable for assining for either testing or using stored config  
+        prefered_model = ''
+        
+        # If test api and model provided, use those (for testing validity)'
+        if test_config:
+            client = OpenAI(api_key=test_config[0]) # Initialize ChatGPT client with test API
+            chatgpt_config = {'model': test_config[1]}
+        # Else use stored config
+        else:
+            chatgpt_config = get_config('llm_configs')['chatgpt_config'] # Load ChatGPT configuration
+            client = OpenAI(api_key=decrypt_data(chatgpt_config['api_key'], encryption_key))
+            prefered_model = chatgpt_config['model']
 
-    try:
         
         response = client.responses.create(
             model=prefered_model,
@@ -173,28 +230,31 @@ def chatgpt_call(prompt, encryption_key, test_config=None):
         )
         return response.output_text
     except Exception as e: # If failes
-        return (e.status_code, e.body) # Return error message (error code, error message)
+        try:
+            return (e.status_code, e.body) # Return error message (error code, error message)
+        except:
+            return ('Failed', e.args[0]) # Otherwise return generic error
 
 # Deepseek llm call
 def deepseek_call(prompt, encryption_key, test_config=None):
     from openai import OpenAI
     
-    # Define prefered model variable for assining for either testing or using stored config  
-    prefered_model = ''
-    
-    # If test api and model provided, use those (for testing validity)'
-    if test_config:
-        client = OpenAI(api_key=test_config[0], base_url="https://api.deepseek.com") # Initialize Deepseek client with test API
-        prefered_model = test_config[1]
-        
-    # Else use stored config
-    else:
-        deepseek_config = get_config('llm_configs')['deepseek_config'] # Load Deepseek configuration
-        client = OpenAI(api_key=decrypt_data(deepseek_config['api_key'], encryption_key), base_url="https://api.deepseek.com")
-        prefered_model = deepseek_config['model']
-        
-        
     try: # Attempt to generate content
+        # Define prefered model variable for assining for either testing or using stored config  
+        prefered_model = ''
+        
+        # If test api and model provided, use those (for testing validity)'
+        if test_config:
+            client = OpenAI(api_key=test_config[0], base_url="https://api.deepseek.com") # Initialize Deepseek client with test API
+            prefered_model = test_config[1]
+            
+        # Else use stored config
+        else:
+            deepseek_config = get_config('llm_configs')['deepseek_config'] # Load Deepseek configuration
+            client = OpenAI(api_key=decrypt_data(deepseek_config['api_key'], encryption_key), base_url="https://api.deepseek.com")
+            prefered_model = deepseek_config['model']
+            
+            
         response = client.chat.completions.create(
             model=prefered_model,
             messages=[
@@ -206,28 +266,31 @@ def deepseek_call(prompt, encryption_key, test_config=None):
         a = response.choices[0].message.content
         return a
     except Exception as e: # If failes
-        return (e.status_code, e.body['message']) # Return error message (error code, error message)
+        try:
+            return (e.status_code, e.body) # Return error message (error code, error message)
+        except:
+            return ('Failed', e.args[0]) # Otherwise return generic error
 
 # Claude llm call
 def claude_call(prompt, encryption_key, test_config=None):
     import anthropic
     
-    # Define prefered model variable for assining for either testing or using stored config  
-    prefered_model = ''
-    
-    # If test api and model provided, use those (for testing validity)'
-    if test_config:
-        client = anthropic.Anthropic(api_key=test_config[0]) # Initialize Claude client with test API
-        prefered_model = test_config[1]
-        
-    # Else use stored config
-    else:
-        claude_config = get_config('llm_configs')['claude_config'] # Load Claude configuration
-        client = anthropic.Anthropic(api_key=decrypt_data(claude_config['api_key'], encryption_key))
-        prefered_model = claude_config['model']
-
-
     try: # Attempt to generate content
+        # Define prefered model variable for assining for either testing or using stored config  
+        prefered_model = ''
+        
+        # If test api and model provided, use those (for testing validity)'
+        if test_config:
+            client = anthropic.Anthropic(api_key=test_config[0]) # Initialize Claude client with test API
+            prefered_model = test_config[1]
+            
+        # Else use stored config
+        else:
+            claude_config = get_config('llm_configs')['claude_config'] # Load Claude configuration
+            client = anthropic.Anthropic(api_key=decrypt_data(claude_config['api_key'], encryption_key))
+            prefered_model = claude_config['model']
+
+
         response = client.messages.create(
             model=prefered_model,
             max_tokens=1000,
@@ -241,4 +304,7 @@ def claude_call(prompt, encryption_key, test_config=None):
         )    
         return response.content[0].text
     except Exception as e: # If failes
-        return (e.status_code, e.body) # Return error message (error code, error message)
+        try:
+            return (e.status_code, e.body) # Return error message (error code, error message)
+        except:
+            return ('Failed', e.args[0]) # Otherwise return generic error

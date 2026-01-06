@@ -17,8 +17,6 @@ def frame(current_page):
             .nicegui-content { padding: 0 !important; margin: 0 !important; max-width: none !important; }
         </style>
     ''')
-    
-    check_timeout(True) # Check for session timeout & reset timer
             
     # Create a full-height row to hold sidebar and main content
     with ui.row().classes('h-screen w-full no-wrap gap-0') as layout_container:
