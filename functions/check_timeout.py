@@ -8,6 +8,11 @@ def check_timeout(reset=False):
 
     print("Checking timeout...")   
     try:
+        if reset:
+            # Update last active time
+            app.storage.tab['last_active'] = time.time()
+            return
+        
         # Check last active time
         last_active = app.storage.tab.get('last_active', 0)
         
@@ -16,9 +21,6 @@ def check_timeout(reset=False):
             app.storage.tab.clear() # Clear session
             ui.navigate.to('/') # Redirect to login
             ui.notify('Session expired', color='red') # Notify user
-        elif reset:
-            # Update last active time
-            app.storage.tab['last_active'] = time.time()
         
     except Exception as e:
         print(f"Error in check_timeout: {e}")
