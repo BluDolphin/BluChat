@@ -9,7 +9,6 @@ from pages.theme import check_timeout
 SETTING_BOX_COLOUR = '0F132D'
 
 
-
 def content():
     # Global function to check for changes in inputs and enable/disable save buttons
     def check_for_changes():
@@ -319,14 +318,16 @@ def content():
         else: # Otherwise set to red
             llm_button_colours[llm_name] = 'red'
         
-    # Get Active LLM
-    # If active_llm is not in valid options, use it
-    active_llm_value = config_data.get('active_llm')
+    # Active LLM handling
+    active_llm_value = config_data.get('active_llm') # Get active llm from config
+    # If active_llm is not in valid options
     if active_llm_value == '' or active_llm_value == None or active_llm_value.capitalize() not in valid_llm_options:
         # Add "No Default Selected" as an option and select
         active_llm_value = 'No Usable LLM Configured'
         valid_llm_options.insert(0, 'No Usable LLM Configured')
-
+    else: # Capitalize for display
+        active_llm_value = active_llm_value.capitalize()
+    
     
     # Main content within the themed frame    
     with frame('Settings'):

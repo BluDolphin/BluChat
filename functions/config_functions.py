@@ -12,13 +12,13 @@ def initialise_config(location_data):
     mistral_default_model = 'mistral-small-latest'
     chatgpt_default_model = 'gpt-5-mini'
     deepseek_default_model = 'deepseek-chat'
-    claude_default_model = 'claude-haiku-4.5'
+    claude_default_model = 'claude-haiku-4-5'
     
     
     default_config = {
         'whitelist_toggle': False,
         'country_code': '',
-        'modem_interface': '/dev/ttyAMD1',
+        'modem_interface': '/dev/ttyAMA0',
         'location': location_data,
         'prompt_instructions': '',
         'active_llm': '',

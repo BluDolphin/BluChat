@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from functions.config_functions import get_config, update_config
 from functions.encryption_functions import decrypt_data, encrypt_data
 
@@ -6,7 +8,7 @@ from functions.encryption_functions import decrypt_data, encrypt_data
 # test_config is a tuple of (api_key, model) for testing validity without updating stored config
 def check_llm_config(llm_name, encryption_key, test_config=None):   
     if llm_name == 'gemini':
-        response = gemini_call('test', encryption_key, test_config) # Test call to check validity
+        response = gemini_call('test', '', encryption_key, test_config=test_config) # Test call to check validity
         
         if isinstance(response, tuple): # If error returned
             update_llm_usability(llm_name, False) # Update usability status to False
@@ -16,7 +18,7 @@ def check_llm_config(llm_name, encryption_key, test_config=None):
         return 0 # Return successful response
     
     elif llm_name == 'mistral':
-        response = mistral_call('test', encryption_key, test_config) # Test call to check validity
+        response = mistral_call('test', '', encryption_key, test_config=test_config) # Test call to check validity
         if isinstance(response, tuple): # If error returned
             update_llm_usability(llm_name, False) # Update usability status to False
             return response # Return error code and message
@@ -25,7 +27,7 @@ def check_llm_config(llm_name, encryption_key, test_config=None):
         return 0 # Return successful response
     
     elif llm_name == 'chatgpt':
-        response = chatgpt_call('test', encryption_key, test_config) # Test call to check validity
+        response = chatgpt_call('test', '', encryption_key, test_config=test_config) # Test call to check validity
         if isinstance(response, tuple): # If error returned
             update_llm_usability(llm_name, False) # Update usability status to False
             return response # Return error code and message
@@ -34,7 +36,7 @@ def check_llm_config(llm_name, encryption_key, test_config=None):
         return 0 # Return successful response
     
     elif llm_name == 'deepseek':
-        response = deepseek_call('test', encryption_key, test_config) # Test call to check validity
+        response = deepseek_call('test', '', encryption_key, test_config=test_config) # Test call to check validity
         if isinstance(response, tuple): # If error returned
             update_llm_usability(llm_name, False) # Update usability status to False
             return response # Return error code and message
@@ -43,7 +45,7 @@ def check_llm_config(llm_name, encryption_key, test_config=None):
         return 0 # Return successful response
     
     elif llm_name == 'claude':
-        response = claude_call('test', encryption_key, test_config) # Test call to check validity
+        response = claude_call('test', '', encryption_key, test_config=test_config) # Test call to check validity
         if isinstance(response, tuple): # If error returned
             update_llm_usability(llm_name, False) # Update usability status to False
             return response # Return error code and message
@@ -53,30 +55,34 @@ def check_llm_config(llm_name, encryption_key, test_config=None):
 
 
 # Main llm call function
-def call_llm_api(prompt, encryption_key):
+def call_llm_api(user_request, encryption_key):
     active_llm = get_config('active_llm') # Get active llm from config
     
     # Parse and Handle prompt 
     # Get stored instructions and decrypt
     stored_instructions_encrypted = get_config('prompt_instructions')
     stored_instructions = decrypt_data(stored_instructions_encrypted, encryption_key)
+    client_location = get_config('location') # Get client location from config
     
     # Create full user request with instructions
-    user_request = f"Response Instructions: {stored_instructions}\nUser Request: {prompt}"
-    
+    llm_instructions = f'Location: {client_location}\n, Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n'
+
+    if stored_instructions != '':
+        llm_instructions += f', Instructions: {stored_instructions}\n'
+        
     # Filter based on active llm
-    if active_llm == 'Gemini':
-        llm_response = gemini_call(user_request, encryption_key)
-    elif active_llm == 'Mistral':
-        llm_response = mistral_call(user_request, encryption_key)
-    elif active_llm == 'Chatgpt':
-        llm_response = chatgpt_call(user_request, encryption_key)
-    elif active_llm == 'DeepSeek':
-        llm_response = deepseek_call(user_request, encryption_key)
-    elif active_llm == 'Claude':
-        llm_response = claude_call(user_request, encryption_key)
+    if active_llm == 'gemini':
+        llm_response = gemini_call(user_request, llm_instructions, encryption_key,)
+    elif active_llm == 'mistral':
+        llm_response = mistral_call(user_request, llm_instructions, encryption_key)
+    elif active_llm == 'chatgpt':
+        llm_response = chatgpt_call(user_request, llm_instructions, encryption_key)
+    elif active_llm == 'deepseek':
+        llm_response = deepseek_call(user_request, llm_instructions, encryption_key)
+    elif active_llm == 'claude':
+        llm_response = claude_call(user_request, llm_instructions, encryption_key)
     else:
-        return ('No Active LLM Configured', 'Please configure an active LLM in the settings page.')
+        return ('No Active LLM Configured, please configure an active LLM in the settings page.')
 
     # If error returned
     if isinstance(llm_response, tuple): 
@@ -127,9 +133,8 @@ def update_llm_values(llm_name, new_api_key, new_model, encryption_key):
     update_config('llm_configs', stored_llm_configs) # Save updated llm_configs back to main config
 
 
-
 # Gemini llm call
-def gemini_call(prompt, encryption_key, test_config=None):
+def gemini_call(prompt, llm_instructions, encryption_key, test_config=None):
     from google import genai
     from google.genai import types
     
@@ -155,20 +160,23 @@ def gemini_call(prompt, encryption_key, test_config=None):
             model=preferred_model, # Specify model from configuration
             contents=prompt, # Provide the prompt
             config=types.GenerateContentConfig(
+                    system_instruction=llm_instructions,
                     # Turn on grounding with Google Search
                     tools=[
                         types.Tool(google_search=types.GoogleSearch())]
                     )
-            )
+                )
         return response.text
+    
     except Exception as e: # If failes
         try:
             return (e.status_code, e.body) # Return error message (error code, error message)
         except:
             return ('Failed', e.args[0]) # Otherwise return generic error
 
+
 # Mistral llm call
-def mistral_call(prompt, encryption_key, test_config=None):
+def mistral_call(prompt, llm_instructions, encryption_key, test_config=None):
     from mistralai import Mistral
     
     # Define prefered model variable for assining for either testing or using stored config  
@@ -189,14 +197,13 @@ def mistral_call(prompt, encryption_key, test_config=None):
         
         response = client.chat.complete(
             model=prefered_model,
-            messages = [
-                {
-                    "role": "user",
-                    "content": prompt,
-                },
-            ]
-        )
+            messages=[
+                {"role": "system", "content": llm_instructions},
+                {"role": "user", "content": prompt},
+                ],
+            )
         return response.choices[0].message.content
+    
     except Exception as e: # If failes
         try:
             return (e.status_code, e.body) # Return error message (error code, error message)
@@ -206,7 +213,7 @@ def mistral_call(prompt, encryption_key, test_config=None):
 
 # Chatgpt llm call
 # TODO: THIS NEEDS TO BE TESTED, ACCOUNT ISSUE WITH OPENAI SO TESTING ISNT POSSIBLE RIGHT NOW
-def chatgpt_call(prompt, encryption_key, test_config=None):
+def chatgpt_call(prompt, llm_instructions, encryption_key, test_config=None):
     from openai import OpenAI
     
     try: # Attempt to generate content
@@ -226,6 +233,7 @@ def chatgpt_call(prompt, encryption_key, test_config=None):
         
         response = client.responses.create(
             model=prefered_model,
+            instructions=llm_instructions,
             input=prompt
         )
         return response.output_text
@@ -236,7 +244,7 @@ def chatgpt_call(prompt, encryption_key, test_config=None):
             return ('Failed', e.args[0]) # Otherwise return generic error
 
 # Deepseek llm call
-def deepseek_call(prompt, encryption_key, test_config=None):
+def deepseek_call(prompt, llm_instructions, encryption_key, test_config=None):
     from openai import OpenAI
     
     try: # Attempt to generate content
@@ -258,7 +266,7 @@ def deepseek_call(prompt, encryption_key, test_config=None):
         response = client.chat.completions.create(
             model=prefered_model,
             messages=[
-                {"role": "system", "content": ""},
+                {"role": "system", "content": llm_instructions},
                 {"role": "user", "content": prompt},
             ],
             stream=False
@@ -272,7 +280,7 @@ def deepseek_call(prompt, encryption_key, test_config=None):
             return ('Failed', e.args[0]) # Otherwise return generic error
 
 # Claude llm call
-def claude_call(prompt, encryption_key, test_config=None):
+def claude_call(prompt, llm_instructions, encryption_key, test_config=None):
     import anthropic
     
     try: # Attempt to generate content
@@ -294,13 +302,15 @@ def claude_call(prompt, encryption_key, test_config=None):
         response = client.messages.create(
             model=prefered_model,
             max_tokens=1000,
+            system=llm_instructions,
             messages=[
                 {
                     "role": "user",
                     "content": prompt
                 }
             ]
-                #,tools=[{"type": "web_search_20250305","name": "web_search","max_uses": 5}]
+            # TODO: add way to reliably parse tools in the future
+            #,tools=[{"type": "web_search_20250305","name": "web_search","max_uses": 5}]
         )    
         return response.content[0].text
     except Exception as e: # If failes

@@ -3,7 +3,8 @@ from textwrap import wrap
 
 from functions.phonenumber_functions import load_numbers
 from functions.config_functions import get_config
-from functions.sms_functions import call_llm_api
+from functions.llm_functions import call_llm_api
+
 
 SERIAL_PORT = get_config('modem_interface')  # Adjust if your modem appears on a different port
 BAUD_RATE = 115200
@@ -164,16 +165,19 @@ def handle_message(message, key):
             CONSOLE_LOG.push("Unauthorized sender. Ignoring message.")
             send_sms(sender, "Your number is not authorized to use this service.")#
             return
+        
         CONSOLE_LOG.push("Authorized sender. Processing message...")
     else: # Whitelist is disabled
         CONSOLE_LOG.push("Whitelist is disabled.")
 
+    # Acknowledge message receipt
+    send_sms(sender, f"Auto-reply: Received your message, processing...")
+
     # Call LLM to generate response
     llm_response = call_llm_api(content, key)
     
-    # Auto-reply with segmented message
+    # Reply with segmented LLM message
     segmented_message = wrap(llm_response, 150)  # Split content into 150 character chunks
-    send_sms('07591432022', f"Auto-reply: Received your message, processing...")
         
     for indivitual_segment in segmented_message:
         run_code = send_sms(sender, indivitual_segment)
@@ -245,15 +249,35 @@ def start_sms_service(key):
         return
     
     RUNNING_FLAG = True
-    MODEM.open()  # Open modem connection
-
-    # Check modem connection
-    if "OK" not in send_command("AT"):
-        CONSOLE_LOG.push("❌ Modem not responding. Check connection.")
-        CONSOLE_LOG.push("Aborted start.")
-        RUNNING_FLAG = False
-        return
     
+    # Try to open modem connection
+    # Attempt range 0-1 (2 attempts)
+    for attempt in range(2):
+        try:
+            if attempt == 1: # Try again by closing and reopening connection
+                CONSOLE_LOG.push("Attempting to close and re-open...")
+                MODEM.close()
+                time.sleep(2)
+
+            MODEM.open() 
+            
+            # Test connection
+            modem_test = send_command("AT")
+            if "OK" in modem_test: # If connection successful
+                break  # Exit retry loop and continue startup
+            
+            # If no OK received, raise error to trigger exception handling
+            CONSOLE_LOG.push("❌ Modem not responding. Retrying...")
+            raise ConnectionError(modem_test)
+            
+        except Exception as e:
+            CONSOLE_LOG.push(f"❌ Could not open modem connection: {e}")
+            
+            if attempt == 1:  # Final attempt failed
+                CONSOLE_LOG.push("Aborted start.")
+                RUNNING_FLAG = False
+                return
+
     # Setup modem
     CONSOLE_LOG.push("Starting SMS service...")
     send_command("ATE0")    # Turn off command echo
@@ -267,6 +291,7 @@ def start_sms_service(key):
     MODEM.close()
     CONSOLE_LOG.push("Modem connection closed.")
 
+
 def stop_sms_service():
     global RUNNING_FLAG # Define flag as global
     
@@ -277,4 +302,3 @@ def stop_sms_service():
     RUNNING_FLAG = False
     # Stopping message
     CONSOLE_LOG.push("Stopping SMS service...")
-        
