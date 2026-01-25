@@ -1,6 +1,6 @@
 from nicegui import ui, app
 import os, secrets, json
-from pages import home, login, setup, whitelist, settings
+from pages import home, login, numbers, setup, settings, numbers
 
 # App is for handling browser storage and session management
 # Checks for a 'authenticated' cookie 
@@ -58,7 +58,7 @@ async def home_page():
     # Show home page
     home.content()
 
-@ui.page('/whitelist')
+@ui.page('/numbers')
 async def number_whitelist_page():
     await ui.context.client.connected()
     # If not authenticated, redirect to login
@@ -67,7 +67,7 @@ async def number_whitelist_page():
         return
     
     # Show settings page
-    whitelist.content()
+    numbers.content()
 
 @ui.page('/settings')
 async def settings_page():

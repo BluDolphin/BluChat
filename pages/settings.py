@@ -97,7 +97,7 @@ def content():
     def whitelist_toggle(value):        
         check_timeout(True)  # Reset timeout timer
         
-        update_config('whitelist_toggle', value) # Update config
+        update_config('global_whitelist', value) # Update config
         
         ui.notify('Whitelist setting updated.', color='green')
             
@@ -200,7 +200,7 @@ def content():
                 
                 # If error, notify user
                 if response != 0: 
-                    raise Exception(f"{response[0]}:{response[1]}")
+                    raise Exception(f'{response[0]}:{response[1]}')
                 
                 # If no error, notify success
                 dropdown_changed(llm, True) # Call dropdown changed to update valid options
@@ -238,8 +238,8 @@ def content():
         update_llm_values(llm_name, new_api_key, new_llm_model, app.storage.tab.get('password'))
 
         # Save unencrypted key for displaying to user
-        stored_llm_config[f"{llm_name}_config"]['api_key'] = new_api_key 
-        stored_llm_config[f"{llm_name}_config"]['model'] = new_llm_model   
+        stored_llm_config[f'{llm_name}_config']['api_key'] = new_api_key 
+        stored_llm_config[f'{llm_name}_config']['model'] = new_llm_model   
         
         dropdown_changed(llm_name, True) # Call dropdown changed to update valid options
         
@@ -320,12 +320,12 @@ def content():
         
     # Active LLM handling
     active_llm_value = config_data.get('active_llm') # Get active llm from config
-    # If active_llm is not in valid options
-    if active_llm_value == '' or active_llm_value == None or active_llm_value.capitalize() not in valid_llm_options:
+    # Normalize stored value to match the capitalized options list used in the dropdown
+    if not active_llm_value or active_llm_value.capitalize() not in valid_llm_options:
         # Add "No Default Selected" as an option and select
         active_llm_value = 'No Usable LLM Configured'
         valid_llm_options.insert(0, 'No Usable LLM Configured')
-    else: # Capitalize for display
+    else: # Capitalize to match dropdown options
         active_llm_value = active_llm_value.capitalize()
     
     
@@ -354,7 +354,7 @@ def content():
                 ui.label('SMS Settings').classes('text-lg mb-2 underline')
                 
                 # Whitelist Toggle
-                ui.checkbox('Whitelist', value=config_data.get('whitelist_toggle'), on_change=lambda e: whitelist_toggle(e.value)).props('dark color="grey"')
+                ui.checkbox('Global Whitelist', value=config_data.get('global_whitelist'), on_change=lambda e: whitelist_toggle(e.value)).props('dark color="grey"')
                 # Country Code and Modem Interface
                 with ui.row():
                     country_code_input = ui.input('Country Code', value=config_data.get('country_code',''), on_change=lambda e: check_for_changes()).props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('mt-4 mr-4')

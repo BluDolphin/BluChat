@@ -16,7 +16,7 @@ def initialise_config(location_data):
     
     
     default_config = {
-        'whitelist_toggle': False,
+        'global_whitelist': False,
         'country_code': '',
         'modem_interface': '/dev/ttyAMA0',
         'location': location_data,
@@ -41,11 +41,13 @@ def load_all_config():
     
     return stored_data
 
+
 def get_config(request):
     with open('data/config.json') as f:
         stored_data = json.load(f)
     
     return stored_data[request]
+
 
 def update_config(request, data):
     with open('data/config.json', 'r') as f:

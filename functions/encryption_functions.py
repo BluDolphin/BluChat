@@ -13,11 +13,12 @@ def check_hash(inputed_password):
     hashed_input = hmac.new(inputed_password, browser_key, hashlib.sha512).digest().hex()
 
     # Read stored password
-    with open("data/crypt_data.json", "r") as f:
+    with open('data/crypt_data.json', 'r') as f:
         stored_password = json.load(f)['password']
             
     # Check if inputed password matches stored password
     return hashed_input == stored_password # Return boolean
+
 
 def hash_password(user_input):
     # use browser key as a salt
@@ -27,6 +28,7 @@ def hash_password(user_input):
     # Hash the inputed password
     hash = hmac.new(user_input, browser_key, hashlib.sha512).digest() 
     return hash
+
 
 def encrypt_data(data, key):
     # Symetric encryption of data using AES-256 with HMAC-SHA512 key derivation
@@ -42,9 +44,10 @@ def encrypt_data(data, key):
     nonce = secrets.token_bytes(24) # 192-bit nonce for AES-GCM
 
     ciphered_message = AESGCM(encryption_key).encrypt(nonce, data.encode('utf-8'), None)
-    encrypted_message = f"{nonce.hex()}:{ciphered_message.hex()}"
+    encrypted_message = f'{nonce.hex()}:{ciphered_message.hex()}'
     
     return encrypted_message
+
 
 def decrypt_data(encrypted_data, key):  
     # Handle empty input 
@@ -69,5 +72,6 @@ def decrypt_data(encrypted_data, key):
         # Decrypt message
         decrypted_message = AESGCM(encryption_key).decrypt(nonce, ciphered_message, None).decode('utf-8')
         return decrypted_message
-    except Exception as e: # Decryption failed
-        return 1
+    except Exception as e: # Decryption failed - assume input is plaintext or incompatible with decryption
+        # Return the original data as a string to preserve non-encrypted values
+        return encrypted_data if isinstance(encrypted_data, str) else str(encrypted_data)

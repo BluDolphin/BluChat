@@ -133,6 +133,18 @@ def update_llm_values(llm_name, new_api_key, new_model, encryption_key):
     update_config('llm_configs', stored_llm_configs) # Save updated llm_configs back to main config
 
 
+def get_llm_usabilities():
+    llm_configs = get_config('llm_configs') # Load current LLM configurations
+    
+    usable = []    
+    for llm in llm_configs: # For each llm config
+        if llm_configs[llm]['usable']: # If usable
+            usable.append(llm.replace('_config', '').capitalize()) # Append usable llm name without _config suffix
+        
+    return usable
+
+
+
 # Gemini llm call
 def gemini_call(prompt, llm_instructions, encryption_key, test_config=None):
     from google import genai
@@ -198,8 +210,8 @@ def mistral_call(prompt, llm_instructions, encryption_key, test_config=None):
         response = client.chat.complete(
             model=prefered_model,
             messages=[
-                {"role": "system", "content": llm_instructions},
-                {"role": "user", "content": prompt},
+                {'role': 'system', 'content': llm_instructions},
+                {'role': 'user', 'content': prompt},
                 ],
             )
         return response.choices[0].message.content
@@ -253,21 +265,21 @@ def deepseek_call(prompt, llm_instructions, encryption_key, test_config=None):
         
         # If test api and model provided, use those (for testing validity)'
         if test_config:
-            client = OpenAI(api_key=test_config[0], base_url="https://api.deepseek.com") # Initialize Deepseek client with test API
+            client = OpenAI(api_key=test_config[0], base_url='https://api.deepseek.com') # Initialize Deepseek client with test API
             prefered_model = test_config[1]
             
         # Else use stored config
         else:
             deepseek_config = get_config('llm_configs')['deepseek_config'] # Load Deepseek configuration
-            client = OpenAI(api_key=decrypt_data(deepseek_config['api_key'], encryption_key), base_url="https://api.deepseek.com")
+            client = OpenAI(api_key=decrypt_data(deepseek_config['api_key'], encryption_key), base_url='https://api.deepseek.com')
             prefered_model = deepseek_config['model']
             
             
         response = client.chat.completions.create(
             model=prefered_model,
             messages=[
-                {"role": "system", "content": llm_instructions},
-                {"role": "user", "content": prompt},
+                {'role': 'system', 'content': llm_instructions},
+                {'role': 'user', 'content': prompt},
             ],
             stream=False
         )
@@ -305,12 +317,12 @@ def claude_call(prompt, llm_instructions, encryption_key, test_config=None):
             system=llm_instructions,
             messages=[
                 {
-                    "role": "user",
-                    "content": prompt
+                    'role': 'user',
+                    'content': prompt
                 }
             ]
             # TODO: add way to reliably parse tools in the future
-            #,tools=[{"type": "web_search_20250305","name": "web_search","max_uses": 5}]
+            #,tools=[{'type': 'web_search_20250305','name': 'web_search','max_uses': 5}]
         )    
         return response.content[0].text
     except Exception as e: # If failes

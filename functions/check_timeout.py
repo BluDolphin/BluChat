@@ -6,7 +6,7 @@ TIMEOUT = 120 # 2 minute timeout
 # Timeout logic
 def check_timeout(reset=False):
 
-    print("Checking timeout...")   
+    print('Checking timeout...')   
     try:
         if reset:
             # Update last active time
@@ -23,4 +23,4 @@ def check_timeout(reset=False):
             ui.notify('Session expired', color='red') # Notify user
         
     except Exception as e:
-        print(f"Error in check_timeout: {e}")
+        print(f'Error in check_timeout: {e}')

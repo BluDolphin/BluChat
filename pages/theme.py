@@ -41,7 +41,7 @@ def frame(current_page):
 
             # Navigation links
             nav_link('Home', '/home')
-            nav_link('Whitelist', '/whitelist')
+            nav_link('Manage Numbers', '/numbers')
             nav_link('Settings', '/settings')
         
         # Main Content Area

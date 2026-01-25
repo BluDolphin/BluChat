@@ -1,5 +1,5 @@
 from nicegui import ui, app
-import os, time, json, requests
+import time, json, requests
 from functions.encryption_functions import hash_password
 from functions.config_functions import initialise_config
 
@@ -34,17 +34,17 @@ def content():
             
             # Extract city, region, country
             location_data =  {
-                "city": data.get("city"),
-                "region": data.get("region"),
-                "country": data.get("country")
+                'city': data.get('city'),
+                'region': data.get('region'),
+                'country': data.get('country')
             }
         except Exception as e: # On failure or disabled
             setup_log.push(f'Error obtaining system location: {str(e)}\n Continuing setup without location data.')
             # Set no location
             location_data = {
-                "city": "",
-                "region": "",
-                "country": ""
+                'city': '',
+                'region': '',
+                'country': ''
                 }
             
         setup_log.push(f'Location data: {location_data}')   
@@ -53,18 +53,19 @@ def content():
         
         
         initialise_config(location_data) # Initialise config without location data
-        open("data/authorised_numbers.json", "a").close() # Create empty authorised numbers file if not exist 
+        open('data/authorised_numbers.json', 'a').close() # Create empty authorised numbers file if not exist 
+        open('data/group_list.json', 'a').close() # Create empty group list file if not exist
         
         # save the hashed password during setup
         setup_log.push('Storing hashed password...')
         
         # Write hashed password 2nd line of crypt_data.json
-        with open("data/crypt_data.json", "r") as f:
+        with open('data/crypt_data.json', 'r') as f:
             stored_data = json.load(f)
             
         stored_data['password'] = hashed_input.hex()
         
-        with open("data/crypt_data.json", "w") as f:
+        with open('data/crypt_data.json', 'w') as f:
             json.dump(stored_data, f, indent=4)
             
         app.storage.tab['authenticated'] = True # Set authenticated flag

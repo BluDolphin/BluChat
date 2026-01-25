@@ -1,7 +1,7 @@
 import serial, time, datetime, logging
 from textwrap import wrap
 
-from functions.phonenumber_functions import load_numbers
+from functions.phonenumber_functions import check_sender_auth
 from functions.config_functions import get_config
 from functions.llm_functions import call_llm_api
 
@@ -161,14 +161,15 @@ def handle_message(message, key):
     whitelist_toggle = get_config('whitelist_toggle')
     if whitelist_toggle: # If whitelist is enabled
         CONSOLE_LOG.push("Whitelist is enabled.")    
-        if not check_authentication(sender, key, whitelist_toggle): # If sender is not authorized
+        if not check_sender_auth(sender, key, whitelist_toggle): # If sender is not authorized
             CONSOLE_LOG.push("Unauthorized sender. Ignoring message.")
-            send_sms(sender, "Your number is not authorized to use this service.")#
-            return
+            send_sms(sender, "Your number is not authorized to use this service.") # Send rejection message
+            return # Exit function without processing further
         
         CONSOLE_LOG.push("Authorized sender. Processing message...")
     else: # Whitelist is disabled
         CONSOLE_LOG.push("Whitelist is disabled.")
+
 
     # Acknowledge message receipt
     send_sms(sender, f"Auto-reply: Received your message, processing...")
@@ -183,31 +184,11 @@ def handle_message(message, key):
         run_code = send_sms(sender, indivitual_segment)
         
         if run_code == 0:
-            CONSOLE_LOG.push("✅ SMS sent successfully!")
+            CONSOLE_LOG.push('✅ SMS sent successfully!')
         elif run_code == 1:
-            CONSOLE_LOG.push("❌ SMS sending failed.")
+            CONSOLE_LOG.push('❌ SMS sending failed.')
         else:
-            CONSOLE_LOG.push(f"❌ An error occurred: {run_code}")
-
-
-# Function to check if sender is authorised
-def check_authentication(sender, key, toggle):
-    if toggle == False:
-        return True
-    
-    authorized_numbers = load_numbers(key)
-    country_code = get_config('country_code')
-        
-    for entry in authorized_numbers:
-        # Convert local UK number to international format
-        if not entry['number'].startswith('+'):
-            entry['number'] = entry['number'][1:] # Cut first number 
-            entry['number'] = country_code + entry['number']  # Convert to international format
-        
-        if entry['number'] == sender and entry['active']:
-            return True
-            
-    return False
+            CONSOLE_LOG.push(f'❌ An error occurred: {run_code}')
 
     
 # Main function to send SMS
@@ -219,19 +200,19 @@ def send_sms(phone, message):
     
         # Check if > was in response as its needed to send messages
         # If no then a problem occurred
-        if ">" not in response:
-            CONSOLE_LOG.push("❌ Did not receive SMS prompt. Aborting.")
-            return
+        if '>' not in response:
+            CONSOLE_LOG.push('❌ Did not receive SMS prompt. Aborting.')
+            return 1
 
         # Ctrl+Z ends the message
-        MODEM.write(message.encode() + b"\x1A")  
+        MODEM.write(message.encode() + b'\x1A')  
         time.sleep(2)
         
         # Get modem response
         response = MODEM.read_all().decode(errors='ignore') 
-        CONSOLE_LOG.push(f"SMS send response:\n{response}")
+        CONSOLE_LOG.push(f'SMS send response:\n{response}')
 
-        if "OK" in response:
+        if 'OK' in response:
             return 0
         else:
             return 1
@@ -255,41 +236,41 @@ def start_sms_service(key):
     for attempt in range(2):
         try:
             if attempt == 1: # Try again by closing and reopening connection
-                CONSOLE_LOG.push("Attempting to close and re-open...")
+                CONSOLE_LOG.push('Attempting to close and re-open...')
                 MODEM.close()
                 time.sleep(2)
 
             MODEM.open() 
             
             # Test connection
-            modem_test = send_command("AT")
-            if "OK" in modem_test: # If connection successful
+            modem_test = send_command('AT')
+            if 'OK' in modem_test: # If connection successful
                 break  # Exit retry loop and continue startup
             
             # If no OK received, raise error to trigger exception handling
-            CONSOLE_LOG.push("❌ Modem not responding. Retrying...")
+            CONSOLE_LOG.push('❌ Modem not responding. Retrying...')
             raise ConnectionError(modem_test)
             
         except Exception as e:
-            CONSOLE_LOG.push(f"❌ Could not open modem connection: {e}")
+            CONSOLE_LOG.push(f'❌ Could not open modem connection: {e}')
             
             if attempt == 1:  # Final attempt failed
-                CONSOLE_LOG.push("Aborted start.")
+                CONSOLE_LOG.push('Aborted start.')
                 RUNNING_FLAG = False
                 return
 
     # Setup modem
-    CONSOLE_LOG.push("Starting SMS service...")
-    send_command("ATE0")    # Turn off command echo
-    send_command("AT+CMGF=1")  # Set SMS to text mode
-    send_command("AT+CMGD=1,4")  # Delete all messages (clearing buffer)
+    CONSOLE_LOG.push('Starting SMS service...')
+    send_command('ATE0')    # Turn off command echo
+    send_command('AT+CMGF=1')  # Set SMS to text mode
+    send_command('AT+CMGD=1,4')  # Delete all messages (clearing buffer)
     
     # Start receiving SMS in background
     recieve_sms(key)
     
     # Close modem connection after stopped
     MODEM.close()
-    CONSOLE_LOG.push("Modem connection closed.")
+    CONSOLE_LOG.push('Modem connection closed.')
 
 
 def stop_sms_service():
@@ -301,4 +282,4 @@ def stop_sms_service():
     
     RUNNING_FLAG = False
     # Stopping message
-    CONSOLE_LOG.push("Stopping SMS service...")
+    CONSOLE_LOG.push('Stopping SMS service...')
