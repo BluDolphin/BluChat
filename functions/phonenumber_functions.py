@@ -57,7 +57,7 @@ def add_number(number, key, identifier='', group='None'):
     except (json.JSONDecodeError, FileNotFoundError):
         encrypted_data = []
         
-    encrypted_data.append({'blocked': True, 
+    encrypted_data.append({'blocked': False, 
                           'number': encrypted_number,
                           'identifier': identifier,
                           'group': group}) # Add new number
@@ -65,7 +65,7 @@ def add_number(number, key, identifier='', group='None'):
     with open('data/authorised_numbers.json', 'w') as f:
         json.dump(encrypted_data, f, indent=4) # Save updated encrypted data
     
-    stored_numbers.append({'blocked': True, 'number': number, 'identifier': identifier, 'group': group}) # Add new number to decrypted list
+    stored_numbers.append({'blocked': False, 'number': number, 'identifier': identifier, 'group': group}) # Add new number to decrypted list
     return stored_numbers # Return updated (decrypted) list
 
 
@@ -181,22 +181,24 @@ def change_group(number, new_group, key):
     return stored_numbers
 
 
-# Function to check if sender is authorised
-def check_sender_auth(sender, key, toggle):
-    if toggle == False:
-        return True
+# Function to check if number is authorised
+def check_sender_auth(number, toggle, key): # pass number, key, and whitelist toggle
+    if toggle == False: # If whitelist disabled
+        return True # All numbers authorised
     
-    authorized_numbers = load_numbers(key)
+    
+    stored_numbers = load_numbers(key) # Load decrypted numbers for searching
+    
     country_code = get_config('country_code')
         
-    for entry in authorized_numbers:
+    for number_dict in stored_numbers:
         # Convert number to international format
-        if not entry['number'].startswith('+'):
-            entry['number'] = entry['number'][1:] # Cut first number 
-            entry['number'] = country_code + entry['number']  # Convert to international format
+        if not number_dict['number'].startswith('+'): # if not international format
+            number_dict['number'] = number_dict['number'][1:] # Cut first number 
+            number_dict['number'] = country_code + number_dict['number']  # Convert to international format
         
-        if entry['number'] == sender and entry['blocked']:
-            return True
+        if number_dict['number'] == number and not number_dict['blocked']: # If number matches and is not blocked
+            return (number_dict['blocked'], number_dict['group'])
             
     return False
 

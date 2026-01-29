@@ -1,10 +1,10 @@
 from os import name
 import json
 from nicegui import ui, app
-from functions.group_functions import create_group, get_group_names, load_all_groups, group_toggle_blocked, group_edit_instructions, delete_group, group_edit_model
 from functions.config_functions import get_config
 from pages.theme import frame
 from functions.phonenumber_functions import load_numbers, add_number, remove_number, toggle_number, change_identifier, change_group
+from functions.group_functions import create_group, get_group_names, load_all_groups, group_toggle_blocked, group_edit_instructions, delete_group, group_edit_model
 from functions.check_timeout import check_timeout
 from functions.llm_functions import get_llm_usabilities
 
@@ -33,6 +33,7 @@ def content():
 
         number_table.rows = result # Update table rows
         new_number_input.value = ''  # Clear input field after adding
+        new_identifier_input.value = ''  # Clear identifier input field after adding
         ui.notify('Number added successfully', color='green')
     
     def number_remove_value(number):
@@ -79,7 +80,6 @@ def content():
         new_group_input.value = ''  # Clear input field after adding
         
         # Reload groups and numbers after adding a group
-        stored_groups = parse_stored_groups(result)
         group_table.rows = stored_groups # Update table rows
         refresh_group_list() # Update available group names in number table dropdowns
         ui.notify('Group added successfully', color='green')
@@ -138,12 +138,12 @@ def content():
         
         # Replace slot in number table for group selection dropdown
         number_table.add_slot('body-cell-group', f'''
-        <q-td :props='props'>
+        <q-td :props="props">
             <q-select dense
-                v-model='props.row.group'
+                v-model="props.row.group"
                 :options='{group_list}'
-                class='w-24'
-                @update:model-value='$parent.$emit('change_group', props.row)' />
+                class="w-24"
+                @update:model-value="$parent.$emit('change_group', props.row)" />
         </q-td>
         ''')
         
@@ -209,7 +209,7 @@ def content():
                     column['align'] = 'center'
                 number_table = ui.table(columns=phone_columns, rows=stored_numbers)
 
-            with ui.card().classes('min-w-[775px] h-auto').style(f'background-color: #{SETTING_BOX_COLOUR}'):
+            with ui.card().classes('min-w-[700px] h-auto').style(f'background-color: #{SETTING_BOX_COLOUR}'):
                 ui.label('Add and manage groups').classes('text-lg mb-2 underline')
                 with ui.row().classes('w-full items-center'):
                     new_group_input = ui.input(label='Group Name').props('underline dark color="dark-gray" input-style="color: white" label-color="white"').classes('w-48')
@@ -248,8 +248,11 @@ def content():
         number_table.add_slot('body-cell-identifier', '''
         <q-td :props="props">
             <q-input dense
+                type="textarea"
+                autogrow
                 v-model="props.row.identifier"
                 class="w-28"
+                rows="2"
                 @blur="$parent.$emit('save_identifier', props.row)" />
         </q-td>
         ''')

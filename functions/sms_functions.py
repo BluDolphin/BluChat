@@ -1,7 +1,8 @@
 import serial, time, datetime, logging
 from textwrap import wrap
 
-from functions.phonenumber_functions import check_sender_auth
+from functions.group_functions import load_group_config
+from functions.phonenumber_functions import check_sender_auth, check_number_exists
 from functions.config_functions import get_config
 from functions.llm_functions import call_llm_api
 
@@ -53,7 +54,7 @@ def recieve_sms(key):
         response = send_command('at+cmgl="REC UNREAD"')  # read all unread messages
         
         if "+CMGL:" in response: # +CMTI: is used as a notification for new messages
-            CONSOLE_LOG.push("New SMS received")
+            CONSOLE_LOG.push("INFO: New SMS received")
 
             messages = parse_response(response, messages) # Send response to parser function
             
@@ -88,7 +89,7 @@ def parse_response(unread_response, current_parsed):
     for i in range(len(unread_response)):
         # Check for message header
         if unread_response[i].startswith('+CMGL:'):
-            CONSOLE_LOG.push(f'Found message header: {unread_response[i]}') 
+            CONSOLE_LOG.push(f'DEBUG: Found message header: {unread_response[i]}') 
             
             # Split the header line into components
             active_response = unread_response[i].split(',') # split by comma
@@ -133,7 +134,7 @@ def parse_response(unread_response, current_parsed):
             for message in current_parsed: # For each stored message
                 # If timestamp is within 5 seconds and matching sender
                 if message[1] == active_response[1] and int(message[2])-10 <= int(active_response[2]) <= int(message[2])+10:  
-                    CONSOLE_LOG.push('Multi message found, appending content.')
+                    CONSOLE_LOG.push('DEBUG: Multi message found, appending content.')
                     
                     message[2] = int(active_response[2])  # Update timestamp to latest message to deal with further multi SMS
                     message[3] += active_response[3]  # Append SMS content to existing message
@@ -155,27 +156,49 @@ def parse_response(unread_response, current_parsed):
 def handle_message(message, key):
     sender = message[1]
     content = message[3]
-    CONSOLE_LOG.push(f"Message from {sender}: {content}")
+    CONSOLE_LOG.push(f"INFO: Message from {sender}: {content}")
     
-    # Check whitelist setting
-    whitelist_toggle = get_config('whitelist_toggle')
+    # Acknowledge message receipt
+    send_sms(sender, f'Auto-reply: Received your message, processing...')
+    
+    # === Whitelist Check ===
+    # Get global whitelist setting
+    whitelist_toggle = get_config('global_whitelist')
+    number_config = check_sender_auth(sender, whitelist_toggle, key)
+
     if whitelist_toggle: # If whitelist is enabled
-        CONSOLE_LOG.push("Whitelist is enabled.")    
-        if not check_sender_auth(sender, key, whitelist_toggle): # If sender is not authorized
-            CONSOLE_LOG.push("Unauthorized sender. Ignoring message.")
-            send_sms(sender, "Your number is not authorized to use this service.") # Send rejection message
+        CONSOLE_LOG.push('INFO: Whitelist is enabled.')   
+         
+        # If number not found in stored numbers or number is marked as blocked
+        if number_config == False or (isinstance(number_config, tuple) and number_config[0] == True):
+            # Send rejection message
+            CONSOLE_LOG.push('INFO: Unauthorized sender. Ignoring message.')
+            send_sms(sender, 'Your number is not authorized to use this service.') 
             return # Exit function without processing further
         
-        CONSOLE_LOG.push("Authorized sender. Processing message...")
+        CONSOLE_LOG.push('INFO: Authorized sender. Processing message...')
     else: # Whitelist is disabled
-        CONSOLE_LOG.push("Whitelist is disabled.")
+        CONSOLE_LOG.push('INFO: Whitelist is disabled.')
 
+    # === Group Check ===
+    # If number has group assigned
+    if (isinstance(number_config, tuple) and number_config[1] != 'None'):
+        CONSOLE_LOG.push(f'DEBUG: Number assigned to group: {number_config[1]}')
+        # load group info and prep
+        group_config = load_group_config(number_config[1], key) # Load group config - returns (blocked, model, instructions)
 
-    # Acknowledge message receipt
-    send_sms(sender, f"Auto-reply: Received your message, processing...")
-
-    # Call LLM to generate response
-    llm_response = call_llm_api(content, key)
+        if group_config[0] == True: # If group is blocked
+            CONSOLE_LOG.push('INFO: Group is blocked. Ignoring message.')
+            send_sms(sender, 'Your group is currently blocked from using this service.') 
+            return # Exit function without processing further
+        
+    else: # Else no group assigned
+        CONSOLE_LOG.push('INFO: No group assigned to number.')
+        group_config = None
+        
+    # === Generate response ===
+    # If group config doesn't exist will pass None
+    llm_response = call_llm_api(content, key, group_config)
     
     # Reply with segmented LLM message
     segmented_message = wrap(llm_response, 150)  # Split content into 150 character chunks
@@ -184,12 +207,11 @@ def handle_message(message, key):
         run_code = send_sms(sender, indivitual_segment)
         
         if run_code == 0:
-            CONSOLE_LOG.push('✅ SMS sent successfully!')
+            CONSOLE_LOG.push('INFO: ✅ SMS sent successfully!')
         elif run_code == 1:
-            CONSOLE_LOG.push('❌ SMS sending failed.')
+            CONSOLE_LOG.push('INFO: ❌ SMS sending failed.')
         else:
-            CONSOLE_LOG.push(f'❌ An error occurred: {run_code}')
-
+            CONSOLE_LOG.push(f'INFO: ❌ An error occurred: {run_code}')
     
 # Main function to send SMS
 def send_sms(phone, message):
@@ -201,7 +223,7 @@ def send_sms(phone, message):
         # Check if > was in response as its needed to send messages
         # If no then a problem occurred
         if '>' not in response:
-            CONSOLE_LOG.push('❌ Did not receive SMS prompt. Aborting.')
+            CONSOLE_LOG.push('INFO: ❌ Did not receive SMS prompt. Aborting.')
             return 1
 
         # Ctrl+Z ends the message
@@ -210,7 +232,7 @@ def send_sms(phone, message):
         
         # Get modem response
         response = MODEM.read_all().decode(errors='ignore') 
-        CONSOLE_LOG.push(f'SMS send response:\n{response}')
+        CONSOLE_LOG.push(f'INFO: SMS send response:\n{response}')
 
         if 'OK' in response:
             return 0
@@ -236,7 +258,7 @@ def start_sms_service(key):
     for attempt in range(2):
         try:
             if attempt == 1: # Try again by closing and reopening connection
-                CONSOLE_LOG.push('Attempting to close and re-open...')
+                CONSOLE_LOG.push('INFO: Attempting to close and re-open...')
                 MODEM.close()
                 time.sleep(2)
 
@@ -248,19 +270,19 @@ def start_sms_service(key):
                 break  # Exit retry loop and continue startup
             
             # If no OK received, raise error to trigger exception handling
-            CONSOLE_LOG.push('❌ Modem not responding. Retrying...')
+            CONSOLE_LOG.push('ERROR: ❌ Modem not responding. Retrying...')
             raise ConnectionError(modem_test)
             
         except Exception as e:
-            CONSOLE_LOG.push(f'❌ Could not open modem connection: {e}')
+            CONSOLE_LOG.push(f'ERROR: ❌ Could not open modem connection: {e}')
             
             if attempt == 1:  # Final attempt failed
-                CONSOLE_LOG.push('Aborted start.')
+                CONSOLE_LOG.push('ERROR: Aborted start.')
                 RUNNING_FLAG = False
                 return
 
     # Setup modem
-    CONSOLE_LOG.push('Starting SMS service...')
+    CONSOLE_LOG.push('INFO: Starting SMS service...')
     send_command('ATE0')    # Turn off command echo
     send_command('AT+CMGF=1')  # Set SMS to text mode
     send_command('AT+CMGD=1,4')  # Delete all messages (clearing buffer)
@@ -270,7 +292,7 @@ def start_sms_service(key):
     
     # Close modem connection after stopped
     MODEM.close()
-    CONSOLE_LOG.push('Modem connection closed.')
+    CONSOLE_LOG.push('INFO: Modem connection closed.')
 
 
 def stop_sms_service():
@@ -282,4 +304,4 @@ def stop_sms_service():
     
     RUNNING_FLAG = False
     # Stopping message
-    CONSOLE_LOG.push('Stopping SMS service...')
+    CONSOLE_LOG.push('INFO: Stopping SMS service...')

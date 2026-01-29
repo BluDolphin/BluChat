@@ -32,25 +32,39 @@ def load_all_groups(key=None):
             
     return stored_groups
 
+
+def load_group_config(group_name, key):
+    stored_groups = load_all_groups(key)
+    
+    # Find group and return its config
+    for group in stored_groups:
+        if group == group_name: 
+            # Return blocked status, model, decrypted instructions
+            return (stored_groups[group]['blocked'],
+                    stored_groups[group]['model'],
+                    stored_groups[group]['llm_instructions'])
+    
+    return None
+
+
 # Create new group
 def create_group(group_name, key):
     # Get default model and instructions from config
     stored_default_model = get_config('active_llm')
-    stored_default_instructions = get_config('prompt_instructions')
-    decrypted_default_instructions = decrypt_data(stored_default_instructions, key)
+    stored_default_instructions = get_config('prompt_instructions') # Already encrypted
     
-    
-    # Load existing groups
-    stored_groups = load_all_groups(key)
+    # Load existing groups encrypted
+    stored_groups = load_all_groups()
     
     # Check if group name already exists
     if group_name in stored_groups:
         return 1 # Error code 1 for already exists
     
+    # Prepare new group data
     new_group_data = {
         'blocked': False,
         'model': stored_default_model,
-        'llm_instructions': decrypted_default_instructions
+        'llm_instructions': stored_default_instructions # Already encrypted from load
     }
     
         
