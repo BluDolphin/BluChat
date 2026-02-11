@@ -1,4 +1,4 @@
-import serial, time, datetime, logging
+import time, datetime, serial
 from textwrap import wrap
 
 from functions.group_functions import load_group_config
@@ -15,8 +15,6 @@ MODEM = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=5)
 MODEM.close()  # Ensure modem is closed initially
 
 RUNNING_FLAG = False  # Flag to control service state (startup and shutdown)
-
-logging.basicConfig(level=logging.INFO)
 
 # Shared log class to allow multiple logs to receive messages
 class SharedHomeLog:
@@ -47,36 +45,18 @@ def send_command(command, delay=1):
 
 
 # Main function to receive SMS
-def recieve_sms(key):    
-    messages = []  # Initialize empty list to store messages
+def recieve_sms(messages):    
+    response = send_command('at+cmgl="REC UNREAD"')  # read all unread messages
     
-    while RUNNING_FLAG:               
-        response = send_command('at+cmgl="REC UNREAD"')  # read all unread messages
-        
-        if "+CMGL:" in response: # +CMTI: is used as a notification for new messages
-            CONSOLE_LOG.push("INFO: New SMS received")
+    if "+CMGL:" in response: # +CMTI: is used as a notification for new messages
+        CONSOLE_LOG.push("INFO: New SMS received")
 
-            messages = parse_response(response, messages) # Send response to parser function
-            
-        # For each parsed message, handle it
-        sent_messages = [] # List to store messages that have been handled
-        for individual_message in messages: # For each message thats currently stored
-            if individual_message[4] == True:  # If message has not had new messages
-                handle_message(individual_message, key) # Handle the message
-                sent_messages.append(individual_message) # Add to sent messages list to be removed later
-            else:     
-                individual_message[4] = True  # Mark message as having been handled as next loop will check for new messages again  
-        
-        
-        # Delete message off modem and remove handled messages from main list
-        for sent_msg in sent_messages: # For each message that has been handled
-            CONSOLE_LOG.push(f"Deleting messages with IDs: {sent_msg[0]}")
-            for msg_id in sent_msg[0]:
-                send_command(f'AT+CMGD={msg_id}')
-            messages.remove(sent_msg) # Remove from main messages list
-            
-        time.sleep(3)  # Check for new messages every 3 seconds
+        messages = parse_response(response, messages) # Send response to parser function
+         
+    return messages
 
+    
+    
 
 # Function to parse modem response for SMS messages
 def parse_response(unread_response, current_parsed):
@@ -151,9 +131,10 @@ def parse_response(unread_response, current_parsed):
     return current_parsed
 
 
+
 # Function to handle received messages
 # Will be used later to trigger AI response or number filtering
-def handle_message(message, key):
+async def handle_message(message, key):
     sender = message[1]
     content = message[3]
     CONSOLE_LOG.push(f"INFO: Message from {sender}: {content}")
@@ -202,44 +183,75 @@ def handle_message(message, key):
     
     # Reply with segmented LLM message
     segmented_message = wrap(llm_response, 150)  # Split content into 150 character chunks
-        
-    for indivitual_segment in segmented_message:
-        run_code = send_sms(sender, indivitual_segment)
-        
-        if run_code == 0:
-            CONSOLE_LOG.push('INFO: ✅ SMS sent successfully!')
-        elif run_code == 1:
-            CONSOLE_LOG.push('INFO: ❌ SMS sending failed.')
-        else:
-            CONSOLE_LOG.push(f'INFO: ❌ An error occurred: {run_code}')
     
+    return segmented_message
+     
 # Main function to send SMS
-def send_sms(phone, message):
+def send_sms(sender, segmented_message):
     MODEM.reset_input_buffer() # Clear any existing input
-    
-    try:
-        response = send_command(f'AT+CMGS="{phone}"')
-    
-        # Check if > was in response as its needed to send messages
-        # If no then a problem occurred
-        if '>' not in response:
-            CONSOLE_LOG.push('INFO: ❌ Did not receive SMS prompt. Aborting.')
-            return 1
-
-        # Ctrl+Z ends the message
-        MODEM.write(message.encode() + b'\x1A')  
-        time.sleep(2)
+      
+    for indivitual_segment in segmented_message:
+        try:
+            response = send_command(f'AT+CMGS="{sender}"') # Send Prep send command
         
-        # Get modem response
-        response = MODEM.read_all().decode(errors='ignore') 
-        CONSOLE_LOG.push(f'INFO: SMS send response:\n{response}')
+            # Check if > was in response as its needed to send messages
+            # If no then a problem occurred
+            if '>' not in response:
+                CONSOLE_LOG.push('INFO: ❌ Did not receive SMS prompt. Aborting.')
 
-        if 'OK' in response:
-            return 0
-        else:
-            return 1
-    except Exception as e:
-        return e
+            # Ctrl+Z ends the message
+            MODEM.write(indivitual_segment.encode() + b'\x1A') # Send message segment
+            time.sleep(2)
+            
+            # Get modem response
+            response = MODEM.read_all().decode(errors='ignore') 
+            CONSOLE_LOG.push(f'INFO: SMS send response:\n{response}')
+
+            if 'OK' in response:
+                CONSOLE_LOG.push('INFO: ✅ SMS segment sent successfully!')
+            else:
+                CONSOLE_LOG.push('INFO: ❌ SMS sending failed.')
+                
+        except Exception as e:
+            CONSOLE_LOG.push(f'INFO: ❌ An error occurred: {e}')
+
+            
+
+def main(key):
+    messages = []  # Initialize empty list to store messages
+    sent_messages = []
+    
+    while RUNNING_FLAG:
+        messages = recieve_sms(messages) # Get new messages 
+
+        # For each parsed message, handle it
+        for individual_message in messages: # For each message thats currently stored
+            if individual_message[4] == False: # if message not complete
+                continue # Dont parse, and go to next message
+            
+            # Async get and handle the llm response
+            llm_response = handle_message(individual_message, key) # Handle the LLM response for the message
+            
+            send_sms(individual_message[1],llm_response) # Pass sender phone number and llm response
+            CONSOLE_LOG.push(f"Marking messages with IDs: {individual_message[0]} for deletion")
+            sent_messages.append(individual_message)
+        
+            # Delete message off modem and remove handled messages from main list
+            for msg in sent_messages:
+                CONSOLE_LOG.push(f"Deleting message with ID: {msg[0]}")
+                
+                for msg_id in msg[0]:
+                    send_command(f'AT+CMGD={msg_id}') # Clear from sim card
+                
+                # TODO: this is might break cause its currently iterating over it
+                messages.remove(sent_messages) # Remove from main messages list
+            sent_messages.clear() # Remove from sent messages list
+            
+        time.sleep(3)  # Check for new messages every 3 seconds
+
+        
+RUNNING_FLAG = True
+main('a')
 
 
 # start and stop service functions
@@ -288,7 +300,7 @@ def start_sms_service(key):
     send_command('AT+CMGD=1,4')  # Delete all messages (clearing buffer)
     
     # Start receiving SMS in background
-    recieve_sms(key)
+    main(key)
     
     # Close modem connection after stopped
     MODEM.close()
