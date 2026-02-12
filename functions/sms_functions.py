@@ -1,4 +1,4 @@
-import serial, time, datetime, logging
+import serial, time, datetime, logging, threading
 from textwrap import wrap
 
 from functions.group_functions import load_group_config
@@ -10,11 +10,12 @@ from functions.llm_functions import call_llm_api
 SERIAL_PORT = get_config('modem_interface')  # Adjust if your modem appears on a different port
 BAUD_RATE = 115200
 
-# define serial port as modem
-MODEM = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=5)
-MODEM.close()  # Ensure modem is closed initially
+# Do not open serial port at import time; create on-demand in start/stop
+MODEM = None
 
 RUNNING_FLAG = False  # Flag to control service state (startup and shutdown)
+
+sms_thread = None
 
 logging.basicConfig(level=logging.INFO)
 
@@ -39,15 +40,19 @@ CONSOLE_LOG = SharedHomeLog()
 
 # Function to send AT commands and read responses
 def send_command(command, delay=1):
-    MODEM.write((command + '\r').encode())
-    time.sleep(delay)
-    response = MODEM.read_all().decode(errors='ignore')
-    CONSOLE_LOG.push(f"> {command}\n{response}")
-    return response
+    try:
+        MODEM.write((command + '\r').encode())
+        time.sleep(delay)
+        response = MODEM.read_all().decode(errors='ignore')
+        CONSOLE_LOG.push(f"> {command}\n{response}")
+        return response
+    except Exception as e:
+        CONSOLE_LOG.push(f'ERROR: Exception in send_command: {e}')
+        return ''
 
 
 # Main function to receive SMS
-def recieve_sms(key):    
+def recieve_sms(key):      
     messages = []  # Initialize empty list to store messages
     
     while RUNNING_FLAG:               
@@ -76,6 +81,7 @@ def recieve_sms(key):
             messages.remove(sent_msg) # Remove from main messages list
             
         time.sleep(3)  # Check for new messages every 3 seconds
+
 
 
 # Function to parse modem response for SMS messages
@@ -191,7 +197,7 @@ def handle_message(message, key):
             CONSOLE_LOG.push('INFO: Group is blocked. Ignoring message.')
             send_sms(sender, 'Your group is currently blocked from using this service.') 
             return # Exit function without processing further
-        
+                
     else: # Else no group assigned
         CONSOLE_LOG.push('INFO: No group assigned to number.')
         group_config = None
@@ -199,6 +205,7 @@ def handle_message(message, key):
     # === Generate response ===
     # If group config doesn't exist will pass None
     llm_response = call_llm_api(content, key, group_config)
+    CONSOLE_LOG.push(f'INFO: LLM response:\n{llm_response}')
     
     # Reply with segmented LLM message
     segmented_message = wrap(llm_response, 150)  # Split content into 150 character chunks
@@ -246,6 +253,8 @@ def send_sms(phone, message):
 def start_sms_service(key):   
     # Define flag as global
     global RUNNING_FLAG
+    global MODEM
+    global sms_thread
     
     # Prevent multiple instances
     if RUNNING_FLAG == True:
@@ -259,10 +268,21 @@ def start_sms_service(key):
         try:
             if attempt == 1: # Try again by closing and reopening connection
                 CONSOLE_LOG.push('INFO: Attempting to close and re-open...')
-                MODEM.close()
+                if MODEM:
+                    try:
+                        MODEM.close()
+                    except Exception:
+                        pass
                 time.sleep(2)
-
-            MODEM.open() 
+                
+            # Open serial port and assign to global variable
+            if MODEM is None:
+                MODEM = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=5)
+            else:
+                try:
+                    MODEM.open()
+                except Exception:
+                    pass
             
             # Test connection
             modem_test = send_command('AT')
@@ -287,21 +307,39 @@ def start_sms_service(key):
     send_command('AT+CMGF=1')  # Set SMS to text mode
     send_command('AT+CMGD=1,4')  # Delete all messages (clearing buffer)
     
-    # Start receiving SMS in background
-    recieve_sms(key)
+    # Start receiving SMS in background thread so main program is not blocked
+    sms_thread = threading.Thread(target=recieve_sms, args=(key), daemon=True)
+    sms_thread.start()
+
+    # Note: MODEM will be closed by stop_sms_service()
+    CONSOLE_LOG.push('INFO: Modem receive thread started.')
     
-    # Close modem connection after stopped
-    MODEM.close()
-    CONSOLE_LOG.push('INFO: Modem connection closed.')
+    # Return from function
+    return 
 
 
 def stop_sms_service():
     global RUNNING_FLAG # Define flag as global
+    global MODEM
+    # Stopping message
+    CONSOLE_LOG.push('INFO: Stopping SMS service...')
     
     # if service is already stopped, do nothing
     if RUNNING_FLAG == False:
         return
     
     RUNNING_FLAG = False
-    # Stopping message
-    CONSOLE_LOG.push('INFO: Stopping SMS service...')
+    
+    # Wait for sms_thread to finish
+    sms_thread.join(timeout=30)  # Wait up to 30 seconds for thread to finish
+    
+    # close modem if open
+    try:
+        if MODEM:
+            MODEM.close()
+            CONSOLE_LOG.push('INFO: Modem connection closed.')
+    except Exception as e:
+        CONSOLE_LOG.push(f'ERROR: Exception while closing modem: {e}')
+    
+    # Return from function
+    return
