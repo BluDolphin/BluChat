@@ -281,6 +281,7 @@ def start_sms_service(key):
             else:
                 try:
                     MODEM.open()
+                    break  # If open successful, break out of loop
                 except Exception:
                     pass
             
@@ -308,7 +309,7 @@ def start_sms_service(key):
     send_command('AT+CMGD=1,4')  # Delete all messages (clearing buffer)
     
     # Start receiving SMS in background thread so main program is not blocked
-    sms_thread = threading.Thread(target=recieve_sms, args=(key), daemon=True)
+    sms_thread = threading.Thread(target=recieve_sms, args=(key,), daemon=True)
     sms_thread.start()
 
     # Note: MODEM will be closed by stop_sms_service()
