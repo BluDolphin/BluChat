@@ -182,26 +182,21 @@ def change_group(number, new_group, key):
 
 
 # Function to check if number is authorised
-def check_sender_auth(number, toggle, key): # pass number, key, and whitelist toggle
-    if toggle == False: # If whitelist disabled
-        return True # All numbers authorised
-    
-    
+def check_sender_config(number, key): # pass number, key, and whitelist toggle
     stored_numbers = load_numbers(key) # Load decrypted numbers for searching
-    
     country_code = get_config('country_code')
-        
-    for number_dict in stored_numbers:
+    
+    # Convert all numbers to international format for comparison (if not already in international format)
+    for number_dict in stored_numbers: 
         # Convert number to international format
         if not number_dict['number'].startswith('+'): # if not international format
             number_dict['number'] = number_dict['number'][1:] # Cut first number 
             number_dict['number'] = country_code + number_dict['number']  # Convert to international format
         
-        if number_dict['number'] == number and not number_dict['blocked']: # If number matches and is not blocked
-            return (number_dict['blocked'], number_dict['group'])
-            
-    return False
-
+        if number_dict['number'] == number: 
+            return (number_dict['blocked'], number_dict['group']) # If number matches return blocked status and group
+        else: 
+            return (False, 'None') # If number not in list return not blocked and no group
 
 # Check if number exists in stored numbers list
 def check_number_exists(number, stored_numbers):    
