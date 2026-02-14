@@ -162,7 +162,8 @@ def parse_response(unread_response, current_parsed):
                     active_response[4] = False  # Indicate message has been handled recently
                     current_parsed.append(active_response)
                     break
-                
+    
+    CONSOLE_LOG.push(f'DEBUG: Current parsed messages: {current_parsed}')            
     #CONSOLE_LOG.push(current_parsed)        
     return current_parsed
 
@@ -176,7 +177,7 @@ async def handle_message(message, key):
     # === Whitelist Check ===
     # Get global whitelist setting
     whitelist_toggle = get_config('global_whitelist')
-    number_config = check_sender_config(sender, key)
+    number_config = check_sender_config(sender, whitelist_toggle, key)
 
     if whitelist_toggle: # If whitelist is enabled
         CONSOLE_LOG.push('DEBUG: Whitelist is enabled.')   
