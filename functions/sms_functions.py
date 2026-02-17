@@ -36,9 +36,9 @@ CONSOLE_LOG = SharedHomeLog()
 
 
 # Function to send AT commands and read responses
-def send_command(command, delay=1):
+def send_command(command):
     MODEM.write((command + '\r').encode())
-    time.sleep(delay)
+    time.sleep(1)
     response = MODEM.read_all().decode(errors='ignore')
     CONSOLE_LOG.push(f"> {command}\n{response}")
     return response
@@ -267,7 +267,7 @@ async def main(key):
             messages.remove(msg) # Clear from stored messages list
             sent_messages.remove(msg) # Clear sent messages list for next loop    
  
-        await asyncio.sleep(3)  # Check for new messages every 3 seconds
+        await asyncio.sleep(2)  # Check for new messages every 3 seconds (send_command had 1 seccond delay)
 
 
 # start and stop service functions

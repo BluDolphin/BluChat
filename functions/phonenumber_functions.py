@@ -195,8 +195,6 @@ def check_sender_config(number, whitelist_toggle, key): # pass number, key, and 
         
         if number_dict['number'] == number: 
             return (number_dict['blocked'], number_dict['group']) # If number matches return blocked status and group
-        else: 
-            return (False, 'None') # If number not in list return not blocked and no group
 
     # For empty lists
     if whitelist_toggle == False: # If whitelist toggle is off, allow all numbers
