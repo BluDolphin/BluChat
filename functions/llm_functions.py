@@ -178,7 +178,7 @@ def gemini_call(prompt, llm_instructions, encryption_key, test_config=None):
                     system_instruction=llm_instructions,
                     # Turn on grounding with Google Search
                     tools=[
-                        types.Tool(googleSearch=types.GoogleSearch())]
+                        types.Tool(google_search=types.GoogleSearch())]
                     )
                 )
         return response.text
