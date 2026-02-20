@@ -10,9 +10,8 @@ from functions.llm_functions import call_llm_api
 SERIAL_PORT = get_config('modem_interface')  # Adjust if your modem appears on a different port
 BAUD_RATE = 115200
 
-# define serial port as modem
-MODEM = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=5)
-MODEM.close()  # Ensure modem is closed initially
+# Do not open serial port at import time; create on-demand in start/stop
+MODEM = None
 
 RUNNING_FLAG = False  # Flag to control service state (startup and shutdown)
 
@@ -89,6 +88,7 @@ def send_sms(sender, segmented_message):
                 
         except Exception as e:
             CONSOLE_LOG.push(f'INFO: ❌ An error occurred: {e}')
+
 
 
 # Function to parse modem response for SMS messages
@@ -210,6 +210,7 @@ async def handle_message(message, key):
     # === Generate response ===
     # If group config doesn't exist will pass None
     llm_response = call_llm_api(content, key, group_config)
+    CONSOLE_LOG.push(f'INFO: LLM response:\n{llm_response}')
     
     # Reply with segmented LLM message
     segmented_message = wrap(llm_response, 150)  # Split content into 150 character chunks
@@ -274,6 +275,8 @@ async def main(key):
 def start_sms_service(key):   
     # Define flag as global
     global RUNNING_FLAG
+    global MODEM
+    global sms_thread
     
     # Prevent multiple instances
     if RUNNING_FLAG == True:
@@ -287,10 +290,22 @@ def start_sms_service(key):
         try:
             if attempt == 1: # Try again by closing and reopening connection
                 CONSOLE_LOG.push('INFO: Attempting to close and re-open...')
-                MODEM.close()
+                if MODEM:
+                    try:
+                        MODEM.close()
+                    except Exception:
+                        pass
                 time.sleep(2)
-
-            MODEM.open() 
+                
+            # Open serial port and assign to global variable
+            if MODEM is None:
+                MODEM = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=5)
+            else:
+                try:
+                    MODEM.open()
+                    break  # If open successful, break out of loop
+                except Exception:
+                    pass
             
             # Test connection
             modem_test = send_command('AT')
@@ -326,6 +341,9 @@ def start_sms_service(key):
 
 def stop_sms_service():
     global RUNNING_FLAG # Define flag as global
+    global MODEM
+    # Stopping message
+    CONSOLE_LOG.push('INFO: Stopping SMS service...')
     
     # if service is already stopped, do nothing
     if RUNNING_FLAG == False:
@@ -333,5 +351,17 @@ def stop_sms_service():
         return
     
     RUNNING_FLAG = False
-    # Stopping message
-    CONSOLE_LOG.push('INFO: Stopping SMS service...')
+    
+    # Wait for sms_thread to finish
+    sms_thread.join(timeout=30)  # Wait up to 30 seconds for thread to finish
+    
+    # close modem if open
+    try:
+        if MODEM:
+            MODEM.close()
+            CONSOLE_LOG.push('INFO: Modem connection closed.')
+    except Exception as e:
+        CONSOLE_LOG.push(f'ERROR: Exception while closing modem: {e}')
+    
+    # Return from function
+    return
