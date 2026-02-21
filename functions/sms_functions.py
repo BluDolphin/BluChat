@@ -7,7 +7,7 @@ from functions.config_functions import get_config
 from functions.llm_functions import call_llm_api
 
 
-SERIAL_PORT = get_config('modem_interface')  # Adjust if your modem appears on a different port
+SERIAL_PORT = None
 BAUD_RATE = 115200
 
 # define serial port as modem
@@ -274,12 +274,14 @@ async def main(key):
 def start_sms_service(key):   
     # Define flag as global
     global RUNNING_FLAG
+    global MODEM
     
     # Prevent multiple instances
     if RUNNING_FLAG == True:
         return
     
     RUNNING_FLAG = True
+    MODEM = get_config('modem_interface')  # Set modem interface from config
     
     # Try to open modem connection
     # Attempt range 0-1 (2 attempts)
