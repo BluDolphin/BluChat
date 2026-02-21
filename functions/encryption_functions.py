@@ -33,6 +33,11 @@ def hash_password(user_input):
 def encrypt_data(data, key):
     # Symetric encryption of data using AES-256 with HMAC-SHA512 key derivation
     # key(Password) and salt(browser_key) hashed for form encryption key
+    if data == '' or data is None:
+        return ''
+    if key == None:
+        return data if isinstance(data, str) else str(data)
+    
     
     with open('data/crypt_data.json', 'r') as f:
         salt = json.load(f)['browser_key']
@@ -53,10 +58,18 @@ def decrypt_data(encrypted_data, key):
     # Handle empty input 
     if encrypted_data == '' or encrypted_data is None:
         return ''
+    if key == None:
+        return encrypted_data if isinstance(encrypted_data, str) else str(encrypted_data)
     
-    with open('data/crypt_data.json', 'r') as f:
-        salt = json.load(f)['browser_key']
-
+    
+    try:
+        with open('data/crypt_data.json', 'r') as f:
+            salt = json.load(f)['browser_key']
+    except Exception as e:
+        # If reading salt fails, return original data to avoid breaking functionality
+        return encrypted_data if isinstance(encrypted_data, str) else str(encrypted_data)
+    
+    
     if isinstance(key, str):
         key = key.encode('utf-8')
         
@@ -64,7 +77,7 @@ def decrypt_data(encrypted_data, key):
     encryption_key = hmac.new(salt.encode('utf-8'), key, hashlib.sha512).digest()[:32] # AES-256 needs 32 bytes key
     
     try:
-        # Split nonce and ciphered message
+        # Split nonce and ciphered message  
         nonce_hex, ciphered_message_hex = encrypted_data.split(':')
         nonce = bytes.fromhex(nonce_hex) # Convert nonce back to bytes
         ciphered_message = bytes.fromhex(ciphered_message_hex) # Convert ciphered message back to bytes

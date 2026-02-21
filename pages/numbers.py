@@ -1,5 +1,4 @@
-from os import name
-import json
+import json, html
 from nicegui import ui, app
 from functions.config_functions import get_config
 from pages.theme import frame
@@ -197,6 +196,7 @@ def content():
     with frame('Whitelist'):
         ui.label('Manage phone numbers and groupings').classes('text-2xl mt-2')
         
+        # Add number and group cards
         with ui.row().classes('my-4'):
             with ui.card().classes('min-w-[570px] h-auto').style(f'background-color: #{SETTING_BOX_COLOUR}'):
                 ui.label('Add and configure phone numbers').classes('text-lg mb-2 underline')
@@ -209,6 +209,7 @@ def content():
                     column['align'] = 'center'
                 number_table = ui.table(columns=phone_columns, rows=stored_numbers)
 
+            # Add group management card
             with ui.card().classes('min-w-[700px] h-auto').style(f'background-color: #{SETTING_BOX_COLOUR}'):
                 ui.label('Add and manage groups').classes('text-lg mb-2 underline')
                 with ui.row().classes('w-full items-center'):
@@ -258,12 +259,13 @@ def content():
         ''')
         
         # Add dropdown for group selection
-        group_list = json.dumps(get_group_names(stored_groups, stored_numbers))
+        group_list = html.escape(json.dumps(get_group_names(stored_groups, stored_numbers))) # Use html escape to prevent special characters from messing with html
+
         number_table.add_slot('body-cell-group', f'''
         <q-td :props="props">
             <q-select dense
                 v-model="props.row.group"
-                :options='{group_list}'
+                :options="{group_list}"
                 class="w-24"
                 @update:model-value="$parent.$emit('change_group', props.row)" />
         </q-td>
