@@ -7,12 +7,10 @@ from functions.config_functions import get_config
 from functions.llm_functions import call_llm_api
 
 
-SERIAL_PORT = None
+SERIAL_PORT = None # Config is loades in start function
 BAUD_RATE = 115200
+MODEM = serial.Serial() # Create an unconfigured Serial instance - configs are set on run
 
-# define serial port as modem
-MODEM = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=5)
-MODEM.close()  # Ensure modem is closed initially
 
 RUNNING_FLAG = False  # Flag to control service state (startup and shutdown)
 
@@ -274,19 +272,24 @@ async def main(key):
 def start_sms_service(key):   
     # Define flag as global
     global RUNNING_FLAG
-    global MODEM
+    global SERIAL_PORT
     
     # Prevent multiple instances
     if RUNNING_FLAG == True:
         return
     
     RUNNING_FLAG = True
-    MODEM = get_config('modem_interface')  # Set modem interface from config
+    SERIAL_PORT = get_config('modem_interface')  # Set modem interface from config
     
     # Try to open modem connection
     # Attempt range 0-1 (2 attempts)
     for attempt in range(2):
         try:
+            # Pass modem configs to the Serial instance
+            MODEM.port = SERIAL_PORT
+            MODEM.baudrate = BAUD_RATE
+            MODEM.timeout = 5
+
             if attempt == 1: # Try again by closing and reopening connection
                 CONSOLE_LOG.push('INFO: Attempting to close and re-open...')
                 MODEM.close()
