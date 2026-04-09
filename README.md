@@ -16,10 +16,9 @@ Bluchat is a self-hosted SMS to LLM relay service which allows searching content
 
 ## Hardware Requirements 
 The project was developed on the following hardware but "should" be compatible with a any Raspberry Pi, and modems which use AT commands.
-- Raspberry Pi 5 (8gb)
+- Raspberry Pi 5 (8gb) - w/ Stock Raspberry Pi OS
 - Clipper 4G LTE HAT Mini ([link](https://thepihut.com/products/clipper-hat-mini-lte-4g-for-raspberry-pi?variant=53799699775873))
 - Generic physical SIM
-- Stock Raspberry Pi OS
 
 ## Installation & Setup
 ### Installation
