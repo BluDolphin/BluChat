@@ -1,5 +1,5 @@
 # BluChat
-Bluchat is a self-hosted SMS to LLM relay service to allow for searching for online content without any form of mobile data or internet connection. This projects main goal is to provide some level of internet access to areas with very poor or no form of internet access.
+Bluchat is a self-hosted SMS to LLM relay service which allows searching content on the internet without any form of mobile data or internet connection. This projects main goal is to provide some level of internet access to areas with very poor or no form of internet access.
 
 ## Features
 - LLM responses from a handful of LLM providers
