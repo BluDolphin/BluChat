@@ -1,5 +1,5 @@
 # BluChat
-Bluchat is a self-hosted SMS to LLM relay service which allows searching content on the internet without any form of mobile data or internet connection. This projects main goal is to provide some level of internet access to areas with very poor or no form of internet access.
+Bluchat is a self-hosted SMS to LLM relay service which allows searching content on the internet without any form of mobile data or internet connection. This projects main goal is to provide some level of internet access (information gathing) to areas with very poor or no internet access.
 
 ## Features
 - LLM responses from a handful of LLM providers
@@ -30,23 +30,25 @@ The project was developed on the following hardware but "should" be compatible w
 To run the program once setup, run `bash run_bluchat.sh`, this will create a new detached tmux session, and launch the program with the .venv. tmux is used to allow the terminal to be closed after starting BluChat.
 
 ### Setup
-Once the program is running the program will request a password to be set, **this cannot be changed without deleting your settings**
+Once the program is running the program will request a password to be set, **this cannot be changed without deleting your settings**.
 
-Following this navigate to the settings page and enter your API key for your chosen model (or models)
+Following this navigate to the settings page and enter your API key for your chosen model (or models).
 
-Set the "default LLM for chats" to your chosen LLM
+Set the "default LLM for chats" to your chosen LLM.
+
+When texting the system make sure your sending SMS messages and not RCS or other technologies, this should be togglable on your phone's messaging app.
 
 To update or change the providers LLM model, enter the LLM's model name found within the providers developer documentation.
 
 ### Reseting System/ Changing Password
 To reset the system delete the folder `data` then restart the program, this will trigger the first time setup again, allowing for a new password to be set.
 
-Note: all currently saved data will be deleted (obviously), and will require re-reconfiguring the system
+Note: all currently saved data will be deleted (obviously), and will require re-reconfiguring the system.
 
 ## Current Limitations
 Currently the LLM's have no form of memory, meaning requests need to contain all the info needed to generate a response. 
 
-As well as this only Gemini has the web searching tool implemented allowing it to search the internet. The rest try to generate a result on their own, if you need more accurate, or up to date info use Gemini
+As well as this only Gemini has the web searching tool implemented allowing it to search the internet. The rest try to generate a result on their own, if you need more accurate, or up to date info use Gemini.
 
 Certian caracters, such as the `°` for degrees C or F and emojis, cannot be sent over SMS and end up being replaced by letters and numbers (B1G for fahrenheit, B1C for celcius).
 
