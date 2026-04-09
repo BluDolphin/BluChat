@@ -45,7 +45,7 @@ Note: all currently saved data will be deleted (obviously), and will require re-
 ## Constrains 
 Currently the LLM's have no form of memory, meaning requests need to contain all the info needed to generate a response. 
 
-Only some LLM models have access to searching the internet to generate responses, others just use try to generate a response without this.
+As well as this only Gemini has the web searching tool implemented allowing it to search the internet. The rest try to generate a result on their own, if you need more accurate, or up to date info use Gemini
 
 
 ## Reccomended LLM Instructions
