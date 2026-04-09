@@ -43,7 +43,7 @@ To reset the system delete the folder `data` then restart the program, this will
 
 Note: all currently saved data will be deleted (obviously), and will require re-reconfiguring the system
 
-## Constrains 
+## Current Limitations
 Currently the LLM's have no form of memory, meaning requests need to contain all the info needed to generate a response. 
 
 As well as this only Gemini has the web searching tool implemented allowing it to search the internet. The rest try to generate a result on their own, if you need more accurate, or up to date info use Gemini
