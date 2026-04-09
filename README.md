@@ -7,7 +7,7 @@ Bluchat is a self-hosted SMS to LLM relay service which allows searching content
   - Deepseek
   - OpenAI 
   - Mistral 
-  - Claude
+  - Anthropic
 - Open ended LLM model selection (use official LLM model names)
 - Customisable LLM Context
 - Whitelist for phone numbers
