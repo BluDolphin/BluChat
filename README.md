@@ -7,7 +7,7 @@ Bluchat is a self-hosted SMS to LLM relay service which allows searching content
   - Deepseek
   - OpenAI 
   - Mistral 
-  - Anthropic
+  - Anthropic (Claude)
 - Open ended LLM model selection (use official LLM model names)
 - Customisable LLM Context
 - Whitelist for phone numbers
@@ -35,6 +35,8 @@ Once the program is running the program will request a password to be set, **thi
 Following this navigate to the settings page and enter your API key for your chosen model (or models)
 
 Set the "default LLM for chats" to your chosen LLM
+
+To update or change the providers LLM model, enter the LLM's model name found within the providers developer documentation.
 
 ### Reseting System/ Changing Password
 To reset the system delete the folder `data` then restart the program, this will trigger the first time setup again, allowing for a new password to be set.
