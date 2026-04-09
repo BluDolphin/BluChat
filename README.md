@@ -42,6 +42,11 @@ To reset the system delete the folder `data` then restart the program, this will
 
 Note: all currently saved data will be deleted (obviously), and will require re-reconfiguring the system
 
+## Constrains 
+Currently the LLM's have no form of memory, meaning requests need to contain all the info needed to generate a response. 
+
+Only some LLM models have access to searching the internet to generate responses, others just use try to generate a response without this.
+
 
 ## Reccomended LLM Instructions
 `Respond in less than 1000 characters, without any emojis. Do not include any
