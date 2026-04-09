@@ -48,7 +48,8 @@ Currently the LLM's have no form of memory, meaning requests need to contain all
 
 As well as this only Gemini has the web searching tool implemented allowing it to search the internet. The rest try to generate a result on their own, if you need more accurate, or up to date info use Gemini
 
+Certian caracters, such as the `°` for degrees C or F and emojis, cannot be sent over SMS and end up being replaced by letters and numbers (B1G for fahrenheit, B1C for celcius).
 
-## Reccomended LLM Instructions
+## Reccomended LLM Instructions (Response Context)
 `Respond in less than 1000 characters, without any emojis. Do not include any
 symbols which cannot be displayed via SMS. You do not have any form of memory, do not ask for follow ups.`
