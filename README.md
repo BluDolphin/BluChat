@@ -1,5 +1,5 @@
 # BluChat
-Bluchat is a self-hosted SMS to LLM relay service which allows searching content on the internet without any form of mobile data or internet connection. This projects main goal is to provide some level of internet access (information gathing) to areas with very poor or no internet access.
+Bluchat is a self-hosted SMS to LLM relay service which allows searching content on the internet without any form of mobile data or internet connection. This projects main goal is to provide some level of internet access/retrieval to areas with very poor or no internet access.
 
 ## Features
 - LLM responses from a handful of LLM providers
@@ -25,10 +25,10 @@ The project was developed on the following hardware but "should" be compatible w
 ### Installation
 - Git clone this repository (or download zip and unzip)
 - Navigate to folder
-- Create python .venv
-- Install requirements.txt within .venv
+- Create python virtual environment
+- Install requirements.txt within the virtual environment
 
-To run the program once setup, run `bash run_bluchat.sh`, this will create a new detached tmux session, and launch the program with the .venv. tmux is used to allow the terminal to be closed after starting BluChat.
+To run the program once setup, run `bash run_bluchat.sh`, this will create a detached tmux session and launch the program using the virtual environment. tmux is used to allow the terminal to be closed after starting BluChat.
 
 ### Setup
 I recommend assigning a static IP to the Raspberry Pi in your routers settings, just to make accessing the settings portal easier 
@@ -55,7 +55,7 @@ Currently the LLM's have no form of memory, meaning requests need to contain all
 
 As well as this only Gemini has the web searching tool implemented allowing it to search the internet. The rest try to generate a result on their own, if you need more accurate, or up to date info use Gemini.
 
-Certian caracters, such as the '°' for degrees C or F and emojis, cannot be sent over SMS and end up being replaced by letters and numbers (B1G for fahrenheit, B1C for celcius).
+Certian caracters, such as the '°' for degrees C/F and emojis, cannot be sent over SMS and end up being replaced by letters and numbers (e.g. B1G for fahrenheit, B1C for celcius).
 
 ## Reccomended LLM Instructions (Response Context)
 `Respond in less than 1000 characters, without any emojis. Do not include any
