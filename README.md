@@ -8,10 +8,11 @@ Bluchat is a self-hosted SMS to LLM relay service which allows searching content
   - OpenAI 
   - Mistral 
   - Anthropic (Claude)
+- Local web interface for configuring settings
 - Open ended LLM model selection (use official LLM model names)
-- Customisable LLM Context
-- Whitelist for phone numbers
-- Groups to manage numbers with custom settings
+- Customisable LLM Instructions (Response Context)
+- Whitelist for allowed phone numbers
+- Groups to manage numbers with customisable settings
 - Sensative data (API keys, Phone numbers, LLM instructions) is stored encrypted on device
 
 ## Hardware Requirements 
