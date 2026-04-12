@@ -30,7 +30,11 @@ The project was developed on the following hardware but "should" be compatible w
 To run the program once setup, run `bash run_bluchat.sh`, this will create a new detached tmux session, and launch the program with the .venv. tmux is used to allow the terminal to be closed after starting BluChat.
 
 ### Setup
-Once the program is running the program will request a password to be set, **this cannot be changed without deleting your settings**.
+I recommend assigning a static IP to the Raspberry Pi in your routers settings, just to make accessing the settings portal easier 
+
+Once the program is running, using another device nativage too `http://[IP Address]:8080` which will show the BluChat setup page
+
+Proceed to set a password for BluChat, **this cannot be changed without deleting your settings**.
 
 Following this navigate to the settings page and enter your API key for your chosen model (or models).
 
