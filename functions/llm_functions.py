@@ -227,7 +227,7 @@ def mistral_call(prompt, llm_instructions, encryption_key, test_config=None):
 
 
 # Chatgpt llm call
-# TODO: THIS NEEDS TO BE TESTED, ACCOUNT ISSUE WITH OPENAI SO TESTING ISNT POSSIBLE RIGHT NOW
+# TODO: THIS NEEDS TO BE TESTED, ACCOUNT ISSUE WITH OPENAI SO TESTING WASN'T COMPLETED
 def chatgpt_call(prompt, llm_instructions, encryption_key, test_config=None):
     from openai import OpenAI
     
@@ -284,6 +284,8 @@ def deepseek_call(prompt, llm_instructions, encryption_key, test_config=None):
                 {'role': 'system', 'content': llm_instructions},
                 {'role': 'user', 'content': prompt},
             ],
+            reasoning_effort="high",
+            extra_body={"thinking": {"type": "enabled"}},
             stream=False
         )
         a = response.choices[0].message.content

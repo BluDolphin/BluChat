@@ -11,7 +11,7 @@ def initialise_config(location_data):
     gemini_default_model = 'gemini-flash-latest'
     mistral_default_model = 'mistral-small-latest'
     chatgpt_default_model = 'gpt-5-mini'
-    deepseek_default_model = 'deepseek-chat'
+    deepseek_default_model = 'deepseek-v4-flash'
     claude_default_model = 'claude-haiku-4-5'
     
     
