@@ -11,7 +11,6 @@ def check_llm_config(llm_name, encryption_key, test_config=None):
         response = gemini_call('test', '', encryption_key, test_config=test_config) # Test call to check validity
         
         if isinstance(response, tuple): # If error returned
-            update_llm_usability(llm_name, False) # Update usability status to False
             return response # Return error code and message
         
         update_llm_usability(llm_name, True) # Update usability status to True
@@ -20,7 +19,6 @@ def check_llm_config(llm_name, encryption_key, test_config=None):
     elif llm_name == 'mistral':
         response = mistral_call('test', '', encryption_key, test_config=test_config) # Test call to check validity
         if isinstance(response, tuple): # If error returned
-            update_llm_usability(llm_name, False) # Update usability status to False
             return response # Return error code and message
         
         update_llm_usability(llm_name, True) # Update usability status to True
@@ -29,7 +27,6 @@ def check_llm_config(llm_name, encryption_key, test_config=None):
     elif llm_name == 'chatgpt':
         response = chatgpt_call('test', '', encryption_key, test_config=test_config) # Test call to check validity
         if isinstance(response, tuple): # If error returned
-            update_llm_usability(llm_name, False) # Update usability status to False
             return response # Return error code and message
         
         update_llm_usability(llm_name, True) # Update usability status to True
@@ -38,7 +35,6 @@ def check_llm_config(llm_name, encryption_key, test_config=None):
     elif llm_name == 'deepseek':
         response = deepseek_call('test', '', encryption_key, test_config=test_config) # Test call to check validity
         if isinstance(response, tuple): # If error returned
-            update_llm_usability(llm_name, False) # Update usability status to False
             return response # Return error code and message
         
         update_llm_usability(llm_name, True) # Update usability status to True
@@ -47,7 +43,6 @@ def check_llm_config(llm_name, encryption_key, test_config=None):
     elif llm_name == 'claude':
         response = claude_call('test', '', encryption_key, test_config=test_config) # Test call to check validity
         if isinstance(response, tuple): # If error returned
-            update_llm_usability(llm_name, False) # Update usability status to False
             return response # Return error code and message
         
         update_llm_usability(llm_name, True) # Update usability status to True
@@ -284,6 +279,8 @@ def deepseek_call(prompt, llm_instructions, encryption_key, test_config=None):
                 {'role': 'system', 'content': llm_instructions},
                 {'role': 'user', 'content': prompt},
             ],
+	    reasoning_effort="high",
+            extra_body={"thinking": {"type": "enabled"}},
             stream=False
         )
         a = response.choices[0].message.content
